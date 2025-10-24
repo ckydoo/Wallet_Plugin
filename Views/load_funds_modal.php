@@ -1,58 +1,66 @@
 <?php echo form_open(get_uri("wallet_plugin/add_funds"), array("id" => "wallet-load-funds-form", "class" => "general-form", "role" => "form")); ?>
-<div class="modal-body clearfix">
-    <div class="container-fluid">
-        <div class="form-group">
-            <label for="amount" class="col-md-3"><?php echo app_lang('amount'); ?></label>
-            <div class="col-md-9">
-                <?php
-                echo form_input(array(
-                    "id" => "amount",
-                    "name" => "amount",
-                    "value" => "",
-                    "class" => "form-control",
-                    "placeholder" => app_lang('amount'),
-                    "type" => "number",
-                    "step" => "0.01",
-                    "min" => "0.01",
-                    "autofocus" => true,
-                    "data-rule-required" => true,
-                    "data-msg-required" => app_lang("field_required"),
-                ));
-                ?>
-            </div>
-        </div>
 
-        <div class="form-group">
-            <label for="description" class="col-md-3"><?php echo app_lang('description'); ?></label>
-            <div class="col-md-9">
-                <?php
-                echo form_textarea(array(
-                    "id" => "description",
-                    "name" => "description",
-                    "value" => "",
-                    "class" => "form-control",
-                    "placeholder" => app_lang('description'),
-                    "rows" => 3
-                ));
-                ?>
-            </div>
+<div class="form-group">
+    <div class="row">
+        <label for="amount" class="col-md-3 col-sm-4"><?php echo app_lang('amount'); ?></label>
+        <div class="col-md-9 col-sm-8">
+            <?php
+            echo form_input(array(
+                "id" => "amount",
+                "name" => "amount",
+                "value" => "",
+                "class" => "form-control",
+                "placeholder" => app_lang('amount'),
+                "type" => "number",
+                "step" => "0.01",
+                "min" => "0.01",
+                "autofocus" => true,
+                "data-rule-required" => true,
+                "data-msg-required" => app_lang("field_required"),
+            ));
+            ?>
         </div>
+    </div>
+</div>
 
-        <div class="form-group">
-            <div class="col-md-12">
-                <p class="text-muted">
-                    <i data-feather="info" class="icon-16"></i>
-                    <?php echo app_lang('wallet_load_funds_note'); ?>
-                </p>
-            </div>
+<div class="form-group">
+    <div class="row">
+        <label for="description" class="col-md-3 col-sm-4"><?php echo app_lang('description'); ?></label>
+        <div class="col-md-9 col-sm-8">
+            <?php
+            echo form_textarea(array(
+                "id" => "description",
+                "name" => "description",
+                "value" => "",
+                "class" => "form-control",
+                "placeholder" => app_lang('description') . ' (' . app_lang('optional') . ')',
+                "rows" => 3
+            ));
+            ?>
+        </div>
+    </div>
+</div>
+
+<div class="form-group">
+    <div class="row">
+        <div class="col-md-12">
+            <p class="text-muted">
+                <i data-feather="info" class="icon-16"></i>
+                <?php echo app_lang('wallet_load_funds_note'); ?>
+            </p>
         </div>
     </div>
 </div>
 
 <div class="modal-footer">
-    <button type="button" class="btn btn-default" data-bs-dismiss="modal"><span data-feather="x" class="icon-16"></span> <?php echo app_lang('close'); ?></button>
-    <button type="submit" class="btn btn-primary"><span data-feather="check-circle" class="icon-16"></span> <?php echo app_lang('add_funds'); ?></button>
+    <button type="button" class="btn btn-default" data-bs-dismiss="modal">
+        <span data-feather="x" class="icon-16"></span> <?php echo app_lang('close'); ?>
+    </button>
+    <button type="submit" class="btn btn-primary">
+        <span data-feather="check-circle" class="icon-16"></span> <?php echo app_lang('add_funds'); ?>
+    </button>
 </div>
+
 <?php echo form_close(); ?>
 
 <script type="text/javascript">
@@ -60,12 +68,20 @@
         $("#wallet-load-funds-form").appForm({
             onSuccess: function (result) {
                 if (result.success) {
+                    $("#wallet-load-funds-modal").modal('hide');
                     appAlert.success(result.message, {duration: 10000});
-                    location.reload();
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
                 } else {
                     appAlert.error(result.message);
                 }
             }
         });
+        
+        // Re-initialize feather icons
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
     });
 </script>

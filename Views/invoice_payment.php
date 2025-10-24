@@ -34,8 +34,12 @@ $wallet_description = get_setting("wallet_payment_wallet_description") ?: "Use y
         <?php echo app_lang('insufficient_wallet_balance'); ?>
         <?php 
         echo modal_anchor(get_uri("wallet_plugin/load_funds_modal"), 
-            app_lang('load_funds'), 
-            array("class" => "btn btn-sm btn-primary"));
+    app_lang('load_funds'), 
+    array(
+        "class" => "btn btn-sm btn-primary",
+        "data-modal-lg" => true,
+        "data-post-id" => "0"
+    ));
         ?>
     </div>
 

@@ -127,15 +127,42 @@ class Wallet_Plugin extends Security_Controller {
     }
 
     // Modal to load funds
-    public function load_funds_modal() {
-        // Check access
-        if (!$this->_can_access_wallet()) {
-            show_404();
-        }
-        
-        $view_data['wallet_currency'] = $this->_get_wallet_settings("wallet_currency") ?: "USD";
-        return $this->template->view('Wallet_Plugin\Views\load_funds_modal', $view_data);
+// Modal to load funds
+public function load_funds_modal() {
+    // Check access
+    if (!$this->_can_access_wallet()) {
+        echo "Access denied";
+        return;
     }
+    
+    $Wallet_model = new \Wallet_Plugin\Models\Wallet_model();
+    $login_user_id = $this->login_user->id;
+    
+    // Get or create wallet
+    $wallet = $Wallet_model->get_one_where(array(
+        "user_id" => $login_user_id,
+        "deleted" => 0
+    ));
+    
+    // If no wallet exists, create one
+    if (!$wallet || !$wallet->id) {
+        $wallet_currency = $this->_get_wallet_settings("wallet_currency") ?: "USD";
+        $wallet_data = array(
+            "user_id" => $login_user_id,
+            "balance" => 0,
+            "currency" => $wallet_currency,
+            "created_at" => get_current_utc_date_time(),
+            "updated_at" => get_current_utc_date_time()
+        );
+        $wallet_id = $Wallet_model->ci_save($wallet_data);
+        $wallet = $Wallet_model->get_one($wallet_id);
+    }
+    
+    $view_data['wallet'] = $wallet;
+    
+    // Use the correct view path for RISE
+    return $this->template->view('Wallet_Plugin\Views\load_funds_modal', $view_data);
+}
 
     // Add funds to wallet
     public function add_funds() {

@@ -22,8 +22,12 @@
                             <?php 
                             echo modal_anchor(get_uri("wallet_plugin/load_funds_modal"), 
                                 "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_funds'), 
-                                array("class" => "btn btn-success mb-2", "title" => app_lang('add_funds')));
-                            ?>
+                                array(
+                                    "class" => "btn btn-success mb-2", 
+                                    "title" => app_lang('add_funds'),
+                                    "data-modal-lg" => true,
+                                    "data-post-id" => "0"
+                                ));
                         </div>
                     </div>
                 </div>

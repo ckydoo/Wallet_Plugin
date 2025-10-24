@@ -17,11 +17,9 @@
 
             <div class="row mb-4">
                 <div class="col-md-12">
-                    <?php 
-                    echo modal_anchor(get_uri("wallet_plugin/load_funds_modal"), 
-                        "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('load_funds'), 
-                        array("class" => "btn btn-success", "title" => app_lang('load_funds')));
-                    ?>
+                   <button type="button" class="btn btn-success" id="load-funds-btn">
+    <i data-feather='plus-circle' class='icon-16'></i> <?php echo app_lang('load_funds'); ?>
+</button>
                 </div>
             </div>
 
@@ -45,6 +43,57 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
+        // Load funds button handler
+        $("#load-funds-btn").click(function() {
+            $.ajax({
+                url: '<?php echo_uri("wallet_plugin/load_funds_modal"); ?>',
+                type: 'GET',
+                dataType: 'html',
+                success: function(result) {
+                    // Check if result contains content
+                    if (result && result.trim() !== '') {
+                        // Open modal and inject content
+                        var modalContent = `
+                            <div class="modal fade" id="wallet-load-funds-modal" tabindex="-1" role="dialog">
+                                <div class="modal-dialog modal-lg" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h4 class="modal-title"><?php echo app_lang("load_funds"); ?></h4>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            ${result}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Remove existing modal if any
+                        $("#wallet-load-funds-modal").remove();
+                        
+                        // Append and show modal
+                        $("body").append(modalContent);
+                        $("#wallet-load-funds-modal").modal('show');
+                        
+                        // Re-initialize feather icons
+                        if (typeof feather !== 'undefined') {
+                            feather.replace();
+                        }
+                    } else {
+                        appAlert.error('<?php echo app_lang("error_occurred"); ?>');
+                        console.log('Empty response from server');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    appAlert.error('<?php echo app_lang("error_occurred"); ?>');
+                    console.log('AJAX Error:', status, error);
+                    console.log('Response:', xhr.responseText);
+                }
+            });
+        });
+        
+        // Transaction table initialization
         $("#wallet-transactions-table").appTable({
             source: '<?php echo_uri("wallet_plugin/transaction_list_data"); ?>',
             columns: [
