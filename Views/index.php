@@ -18,8 +18,8 @@
             <div class="row mb-4">
                 <div class="col-md-12">
                    <button type="button" class="btn btn-success" id="load-funds-btn">
-    <i data-feather='plus-circle' class='icon-16'></i> <?php echo app_lang('load_funds'); ?>
-</button>
+                        <i data-feather='plus-circle' class='icon-16'></i> <?php echo app_lang('load_funds'); ?>
+                    </button>
                 </div>
             </div>
 

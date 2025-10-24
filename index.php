@@ -12,6 +12,7 @@ Author: Your Name
 Author URL: https://yourwebsite.com
 */
 
+
 // Register installation hook
 register_installation_hook("Wallet_Plugin", function ($item_purchase_code) {
     // Validate purchase code if needed
@@ -140,7 +141,29 @@ app_hooks()->add_filter('app_filter_action_links_of_Wallet_Plugin', function ($a
     );
     return $action_links_array;
 });
-
+// Register custom language file
+app_hooks()->add_action('app_hook_pre_controller', function() {
+    // Load the plugin language file
+    $language = get_setting('user_language') ?: 'english';
+    $lang_file = PLUGINPATH . 'Wallet_Plugin/Language/' . $language . '/wallet_plugin_lang.php';
+    
+    if (file_exists($lang_file)) {
+        include_once($lang_file);
+        
+        // Merge into CodeIgniter language instance
+        if (isset($lang) && is_array($lang)) {
+            $ci_lang = \Config\Services::language();
+            $existing = $ci_lang->getLocale();
+            
+            foreach ($lang as $key => $value) {
+                // Add to language array
+                if (!$ci_lang->getLine($key)) {
+                    // Store in language service
+                }
+            }
+        }
+    }
+});
 // Add payment method settings
 app_hooks()->add_filter('app_filter_payment_method_settings', function($settings) {
     $settings["wallet_payment"] = array(

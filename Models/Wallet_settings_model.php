@@ -7,9 +7,13 @@ use App\Models\Crud_model;
 class Wallet_settings_model extends Crud_model {
 
     protected $table = null;
+    protected $allowedFields = [
+        'setting_name',
+        'setting_value',
+        'deleted'
+    ];
 
     public function __construct() {
-        // Pass ONLY the table name without prefix to parent
         $this->table = 'wallet_settings';
         parent::__construct($this->table);
     }
@@ -38,9 +42,9 @@ class Wallet_settings_model extends Crud_model {
         );
 
         if ($exists && $exists->id) {
-            return $this->ci_save($data, $exists->id);
+            return $this->update($exists->id, $data);
         } else {
-            return $this->ci_save($data);
+            return $this->insert($data);
         }
     }
 

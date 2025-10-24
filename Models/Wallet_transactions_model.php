@@ -7,9 +7,23 @@ use App\Models\Crud_model;
 class Wallet_transactions_model extends Crud_model {
 
     protected $table = null;
+    protected $allowedFields = [
+        'wallet_id',
+        'user_id',
+        'transaction_type',
+        'amount',
+        'currency',
+        'reference_type',
+        'reference_id',
+        'description',
+        'balance_before',
+        'balance_after',
+        'created_by',
+        'created_at',
+        'deleted'
+    ];
 
     public function __construct() {
-        // Pass ONLY the table name without prefix to parent
         $this->table = 'wallet_transactions';
         parent::__construct($this->table);
     }

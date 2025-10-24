@@ -7,10 +7,16 @@ use App\Models\Crud_model;
 class Wallet_model extends Crud_model {
 
     protected $table = null;
+    protected $allowedFields = [
+        'user_id',
+        'balance',
+        'currency',
+        'created_at',
+        'updated_at',
+        'deleted'
+    ];
 
     public function __construct() {
-        // Pass ONLY the table name without prefix to parent
-        // Parent Crud_model will add the prefix automatically
         $this->table = 'wallet';
         parent::__construct($this->table);
     }
@@ -62,10 +68,10 @@ class Wallet_model extends Crud_model {
     public function update_balance($wallet_id, $new_balance) {
         $data = array(
             "balance" => $new_balance,
-            "updated_at" => get_current_utc_date_time()
+            "updated_at" => date('Y-m-d H:i:s')
         );
 
-        return $this->ci_save($data, $wallet_id);
+        return $this->update($wallet_id, $data);
     }
 
     public function get_user_balance($user_id) {

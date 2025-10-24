@@ -32,7 +32,7 @@ $lang["transaction_date"] = "Transaction Date";
 $lang["balance_before"] = "Balance Before";
 $lang["balance_after"] = "Balance After";
 
-$lang["wallet_load_funds_note"] = "Note: Funds will be added to your wallet balance after admin approval";
+$lang["wallet_load_funds_note"] = "Note: Funds will be added to your wallet balance immediately";
 $lang["insufficient_balance"] = "Insufficient balance in wallet";
 $lang["insufficient_wallet_balance"] = "You don't have enough balance in your wallet to make this payment";
 $lang["payment_successful"] = "Payment successful";
