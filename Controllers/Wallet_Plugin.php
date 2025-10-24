@@ -419,23 +419,31 @@ class Wallet_Plugin extends Security_Controller {
     }
 
     // Client wallet tab - VIEW ONLY
-    public function client_wallet($client_id) {
-        if (!$client_id) {
-            show_404();
-        }
-
-        $Wallet_model = new \Wallet_Plugin\Models\Wallet_model();
-        $wallet = $Wallet_model->get_one_where(array(
-            "user_id" => $client_id,
-            "deleted" => 0
-        ));
-
-        $view_data['wallet'] = $wallet;
-        $view_data['client_id'] = $client_id;
-        $view_data['is_staff'] = $this->_is_wallet_manager();
-
-        return $this->template->view('Wallet_Plugin\Views\client_wallet_tab', $view_data);
+    // Client wallet tab - VIEW ONLY
+public function client_wallet($client_id) {
+    // Temporary debug
+    error_log("Client Wallet Called - Client ID: " . $client_id);
+    error_log("User Type: " . $this->login_user->user_type);
+    
+    if (!$client_id) {
+        error_log("Client ID is empty!");
+        show_404();
     }
+    
+
+    $Wallet_model = new \Wallet_Plugin\Models\Wallet_model();
+    $wallet = $Wallet_model->get_one_where(array(
+        "user_id" => $client_id,
+        "deleted" => 0
+    ));
+
+    $view_data['wallet'] = $wallet;
+    $view_data['client_id'] = $client_id;
+    $view_data['is_staff'] = $this->_is_wallet_manager();
+
+    // Use template->view() for AJAX tabs, not template->rander()
+    return $this->template->view('Wallet_Plugin\Views\client_wallet_tab', $view_data);
+}
 
     // Admin manage all wallets - STAFF/ADMIN ONLY
     public function admin_manage_wallets() {

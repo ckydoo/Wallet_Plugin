@@ -186,10 +186,10 @@ app_hooks()->add_action('app_hook_invoice_payment_extension', function($payment_
     }
 });
 
-// Add menu item for CLIENT users ONLY - they see their wallet
+// Client menu - shows "My Wallet"
 app_hooks()->add_filter('app_filter_client_left_menu', function ($sidebar_menu) {
-    $sidebar_menu["wallet_plugin_menu"] = array(
-        "name" => "My Wallet",
+    $sidebar_menu["wallet"] = array(
+        "name" => "my_wallet",
         "url" => "wallet_plugin/index",
         "class" => "credit-card",
         "position" => 10
@@ -197,10 +197,10 @@ app_hooks()->add_filter('app_filter_client_left_menu', function ($sidebar_menu) 
     return $sidebar_menu;
 });
 
-// Add menu item for STAFF/ADMIN users - they see wallet management
+// Staff/Admin menu - shows "Manage Wallets"  
 app_hooks()->add_filter('app_filter_staff_left_menu', function ($sidebar_menu) {
-    $sidebar_menu["wallet_plugin_menu"] = array(
-        "name" => "Manage Wallets",
+    $sidebar_menu["wallet_management"] = array(
+        "name" => "manage_wallets",
         "url" => "wallet_plugin/admin_manage_wallets",
         "class" => "credit-card",
         "position" => 15
@@ -208,16 +208,6 @@ app_hooks()->add_filter('app_filter_staff_left_menu', function ($sidebar_menu) {
     return $sidebar_menu;
 });
 
-// Also add to admin menu for better visibility
-app_hooks()->add_filter('app_filter_admin_left_menu', function ($sidebar_menu) {
-    $sidebar_menu["wallet_plugin_menu"] = array(
-        "name" => "Manage Wallets",
-        "url" => "wallet_plugin/admin_manage_wallets",
-        "class" => "credit-card",
-        "position" => 15
-    );
-    return $sidebar_menu;
-});
 
 // Add wallet widget to CLIENT dashboard only
 app_hooks()->add_filter('app_filter_dashboard_widget', function ($default_widgets_array) {

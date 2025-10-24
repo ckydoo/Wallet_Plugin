@@ -19,9 +19,16 @@
                     <div class="card">
                         <div class="card-body">
                             <h5><?php echo app_lang('actions'); ?></h5>
-                            <button type="button" class="btn btn-success mb-2" id="load-funds-for-client-btn" data-client-id="<?php echo $client_id; ?>">
-                                <i data-feather='plus-circle' class='icon-16'></i> <?php echo wallet_lang('load_funds'); ?>
-                            </button>
+                            <?php 
+                            echo modal_anchor(get_uri("wallet_plugin/load_funds_modal?target_user_id=" . $client_id), 
+                                "<i data-feather='plus-circle' class='icon-16'></i> " . wallet_lang('load_funds'), 
+                                array(
+                                    "class" => "btn btn-success mb-2", 
+                                    "title" => wallet_lang('load_funds'),
+                                    "data-post-target_user_id" => $client_id
+                                )
+                            );
+                            ?>
                         </div>
                     </div>
                 </div>
@@ -40,10 +47,16 @@
         <div class="alert alert-warning">
             <p><?php echo wallet_lang('wallet_not_created'); ?></p>
             <?php if (isset($is_staff) && $is_staff) { ?>
-                <button class="btn btn-primary" id="load-funds-for-client-btn" data-client-id="<?php echo $client_id; ?>">
-                    <i data-feather="plus-circle" class="icon-16"></i>
-                    <?php echo wallet_lang('load_funds'); ?>
-                </button>
+                <?php 
+                echo modal_anchor(get_uri("wallet_plugin/load_funds_modal?target_user_id=" . $client_id), 
+                    "<i data-feather='plus-circle' class='icon-16'></i> " . wallet_lang('load_funds'), 
+                    array(
+                        "class" => "btn btn-primary", 
+                        "title" => wallet_lang('load_funds'),
+                        "data-post-target_user_id" => $client_id
+                    )
+                );
+                ?>
                 <p class="mt-2"><small>Creating a wallet and loading funds for this client</small></p>
             <?php } ?>
         </div>
@@ -58,57 +71,14 @@
             filterParams: {user_id: <?php echo $client_id; ?>},
             columns: [
                 {title: '<?php echo app_lang("date"); ?>', "class": "w15p"},
-                {title: '<?php echo app_lang("type"); ?>', "class": "w10p text-center"},
+                {title: '<?php echo wallet_lang("type"); ?>', "class": "w10p text-center"},
                 {title: '<?php echo app_lang("amount"); ?>', "class": "w15p text-right"},
-                {title: '<?php echo app_lang("description"); ?>'},
+                {title: '<?php echo wallet_lang("description"); ?>'},
                 {title: '<?php echo wallet_lang("balance_after"); ?>', "class": "w15p text-right"}
             ],
             order: [[0, "desc"]]
         });
         <?php } ?>
-
-        // Load funds button for staff
-        $(document).on('click', '#load-funds-for-client-btn', function() {
-            var clientId = $(this).data('client-id');
-            
-            $.ajax({
-                url: '<?php echo_uri("wallet_plugin/load_funds_modal"); ?>?target_user_id=' + clientId,
-                type: 'GET',
-                dataType: 'html',
-                success: function(result) {
-                    if (result && result.trim() !== '') {
-                        var modalContent = `
-                            <div class="modal fade" id="wallet-load-funds-modal" tabindex="-1" role="dialog">
-                                <div class="modal-dialog modal-lg" role="document">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h4 class="modal-title"><?php echo wallet_lang("load_funds"); ?></h4>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            ${result}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        
-                        $("#wallet-load-funds-modal").remove();
-                        $("body").append(modalContent);
-                        $("#wallet-load-funds-modal").modal('show');
-                        
-                        if (typeof feather !== 'undefined') {
-                            feather.replace();
-                        }
-                    } else {
-                        appAlert.error('<?php echo app_lang("error_occurred"); ?>');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    appAlert.error('<?php echo app_lang("error_occurred"); ?>');
-                }
-            });
-        });
 
         // Initialize feather icons
         if (typeof feather !== 'undefined') {
