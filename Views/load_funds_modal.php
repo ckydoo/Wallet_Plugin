@@ -1,62 +1,75 @@
 <?php 
-// Check if user is admin - if so, show client selector
-$is_admin = isset($is_admin) ? $is_admin : false;
-$all_users = isset($all_users) ? $all_users : array();
+$target_user_id = isset($target_user_id) ? $target_user_id : 0;
 $login_user_id = isset($login_user_id) ? $login_user_id : 0;
 ?>
 
 <?php echo form_open(get_uri("wallet_plugin/add_funds"), array("id" => "wallet-load-funds-form", "class" => "general-form", "role" => "form")); ?>
 
-<?php if ($is_admin) { ?>
 <div class="form-group">
     <div class="row">
         <label for="target_user_id" class="col-md-3 col-sm-4">
-            <?php echo "Select User/Client"; ?>
+            <?php echo app_lang('client'); ?> <span class="text-danger">*</span>
         </label>
         <div class="col-md-9 col-sm-8">
             <?php
-            // Build user options from the data passed from controller
-            $user_options = array('' => '-- Select User/Client --');
+            // Get list of all clients from clients table
+            $db = \Config\Database::connect();
+            $db_prefix = $db->getPrefix();
             
-            if (!empty($all_users)) {
-                foreach ($all_users as $user) {
-                    $user_type_label = $user->user_type === 'client' ? '(Client)' : '(Staff)';
-                    $name = $user->first_name . ' ' . $user->last_name . ' ' . $user_type_label . ' - ' . $user->email;
-                    $user_options[$user->id] = $name;
+            // Get clients from the clients table
+            $clients = $db->table($db_prefix . 'clients')
+                ->where('deleted', 0)
+                ->orderBy('company_name', 'ASC')
+                ->get()
+                ->getResult();
+            
+            // Build dropdown options
+            $client_options = array("" => "- " . app_lang('select_a_client') . " -");
+            
+            if ($clients) {
+                foreach ($clients as $client) {
+                    // Format: Company Name - Contact info
+                    $name = $client->company_name;
+                    
+                    // Add additional info if available
+                    $additional_info = array();
+                    if (!empty($client->primary_contact_name)) {
+                        $additional_info[] = $client->primary_contact_name;
+                    } elseif (!empty($client->owner_name)) {
+                        $additional_info[] = $client->owner_name;
+                    }
+                    
+                    if (!empty($additional_info)) {
+                        $name .= ' (' . implode(', ', $additional_info) . ')';
+                    }
+                    
+                    $client_options[$client->id] = $name;
                 }
             }
             
             echo form_dropdown(
                 "target_user_id",
-                $user_options,
-                '',
+                $client_options,
+                $target_user_id,
                 array(
                     "id" => "target_user_id",
-                    "class" => "form-control",
-                    "required" => true
+                    "class" => "form-control select2",
+                    "required" => true,
+                    "data-rule-required" => true,
+                    "data-msg-required" => app_lang("field_required")
                 )
             );
-            
-            if (empty($all_users)) {
-                echo "<small class='text-warning'>No users found in the system</small>";
-            }
             ?>
-            <small class="form-text text-muted">Select which user/client to load funds for</small>
+            <small class="form-text text-muted">Select the client to load funds for</small>
         </div>
     </div>
 </div>
-<?php } else { ?>
-    <!-- Hidden input for non-admin users - always their own ID -->
-    <input type="hidden" name="target_user_id" value="<?php echo $login_user_id; ?>">
-    
-    <div class="alert alert-info">
-        <small>Funds will be loaded to your wallet</small>
-    </div>
-<?php } ?>
 
 <div class="form-group">
     <div class="row">
-        <label for="amount" class="col-md-3 col-sm-4"><?php echo wallet_lang('amount'); ?></label>
+        <label for="amount" class="col-md-3 col-sm-4">
+            <?php echo wallet_lang('amount'); ?> <span class="text-danger">*</span>
+        </label>
         <div class="col-md-9 col-sm-8">
             <?php
             echo form_input(array(
@@ -73,6 +86,7 @@ $login_user_id = isset($login_user_id) ? $login_user_id : 0;
                 "data-msg-required" => app_lang("field_required"),
             ));
             ?>
+            <small class="form-text text-muted">Enter the amount received from the client</small>
         </div>
     </div>
 </div>
@@ -91,6 +105,7 @@ $login_user_id = isset($login_user_id) ? $login_user_id : 0;
                 "rows" => 3
             ));
             ?>
+            <small class="form-text text-muted">Optional: Add a note about this transaction (e.g., "Bank transfer ref #12345")</small>
         </div>
     </div>
 </div>
@@ -98,10 +113,10 @@ $login_user_id = isset($login_user_id) ? $login_user_id : 0;
 <div class="form-group">
     <div class="row">
         <div class="col-md-12">
-            <p class="text-muted">
+            <div class="alert alert-info">
                 <i data-feather="info" class="icon-16"></i>
-                <?php echo wallet_lang('wallet_load_funds_note'); ?>
-            </p>
+                <strong>Note:</strong> This will credit the selected client's wallet. Make sure you have received the payment from the client before loading funds.
+            </div>
         </div>
     </div>
 </div>
@@ -119,11 +134,18 @@ $login_user_id = isset($login_user_id) ? $login_user_id : 0;
 
 <script type="text/javascript">
     $(document).ready(function () {
+        // Initialize Select2 for better client selection with search
+        $("#target_user_id").select2({
+            dropdownParent: $("#wallet-load-funds-modal")
+        });
+        
         $("#wallet-load-funds-form").appForm({
             onSuccess: function (result) {
                 if (result.success) {
                     $("#wallet-load-funds-modal").modal('hide');
                     appAlert.success(result.message, {duration: 10000});
+                    
+                    // Reload the page to show updated balance
                     setTimeout(function() {
                         location.reload();
                     }, 1000);
