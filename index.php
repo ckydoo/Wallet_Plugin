@@ -213,6 +213,16 @@ app_hooks()->add_filter('app_filter_client_left_menu', function ($sidebar_menu) 
     return $sidebar_menu;
 });
 
+app_hooks()->add_filter('app_filter_admin_left_menu', function ($sidebar_menu) {
+    $sidebar_menu["wallet_management"] = array(
+        "name" => "manage_wallets",  // Changed to language key
+        "url" => "wallet_plugin/admin_manage_wallets",
+        "class" => "credit-card",
+        "position" => 15
+    );
+    return $sidebar_menu;
+});
+
 // Add wallet widget to dashboard
 app_hooks()->add_filter('app_filter_dashboard_widget', function ($default_widgets_array) {
     array_push($default_widgets_array, array(
@@ -260,15 +270,7 @@ app_hooks()->add_filter('app_filter_admin_settings_menu', function($settings_men
     );
     return $settings_menu;
 });
-app_hooks()->add_filter('app_filter_admin_left_menu', function ($sidebar_menu) {
-    $sidebar_menu["wallet_management"] = array(
-        "name" => "Manage Wallets",  // HARDCODED
-        "url" => "wallet_plugin/admin_manage_wallets",
-        "class" => "credit-card",
-        "position" => 15
-    );
-    return $sidebar_menu;
-});
+
 // Add client details tab
 app_hooks()->add_filter('app_filter_client_details_ajax_tab', function ($hook_tabs, $client_id) {
     $hook_tabs[] = array(
