@@ -8,7 +8,8 @@ class Wallet_Plugin extends Security_Controller {
 
     public function __construct() {
         parent::__construct();
-        // Check if user is logged in and is either staff or client
+        
+        // Check if user is logged in
         if (!$this->login_user->id) {
             redirect('signin');
         }
@@ -57,8 +58,8 @@ class Wallet_Plugin extends Security_Controller {
                     "user_id" => $login_user_id,
                     "balance" => 0,
                     "currency" => $this->_get_wallet_settings("wallet_currency") ?: "USD",
-                    "created_at" => \get_current_utc_date_time(),
-                    "updated_at" => \get_current_utc_date_time()
+                    "created_at" => get_current_utc_date_time(),
+                    "updated_at" => get_current_utc_date_time()
                 );
                 $wallet_id = $Wallet_model->ci_save($wallet_data);
                 $wallet = $Wallet_model->get_one($wallet_id);
@@ -73,11 +74,20 @@ class Wallet_Plugin extends Security_Controller {
 
     // Show transactions list
     public function transactions() {
+        if (!$this->_can_access_wallet()) {
+            show_404();
+        }
+        
         return $this->template->rander('Wallet_Plugin\Views\transactions');
     }
 
     // Get transaction list data for datatable
     public function transaction_list_data() {
+        if (!$this->_can_access_wallet()) {
+            echo json_encode(array("data" => array()));
+            return;
+        }
+        
         $Wallet_transactions_model = new \Wallet_Plugin\Models\Wallet_transactions_model();
         $login_user_id = $this->login_user->id;
         
@@ -97,10 +107,10 @@ class Wallet_Plugin extends Security_Controller {
 
     private function _make_transaction_row($data) {
         $transaction_type = $data->transaction_type == "credit" 
-            ? "<span class='badge badge-success'>" . \app_lang("credit") . "</span>"
-            : "<span class='badge badge-danger'>" . \app_lang("debit") . "</span>";
+            ? "<span class='badge badge-success'>" . app_lang("credit") . "</span>"
+            : "<span class='badge badge-danger'>" . app_lang("debit") . "</span>";
         
-        $amount = \to_currency($data->amount, $data->currency);
+        $amount = to_currency($data->amount, $data->currency);
         if ($data->transaction_type == "debit") {
             $amount = "-" . $amount;
         } else {
@@ -108,22 +118,32 @@ class Wallet_Plugin extends Security_Controller {
         }
         
         return array(
-            \format_to_datetime($data->created_at),
+            format_to_datetime($data->created_at),
             $transaction_type,
             $amount,
             $data->description ?: "-",
-            \to_currency($data->balance_after, $data->currency)
+            to_currency($data->balance_after, $data->currency)
         );
     }
 
     // Modal to load funds
     public function load_funds_modal() {
+        // Check access
+        if (!$this->_can_access_wallet()) {
+            show_404();
+        }
+        
         $view_data['wallet_currency'] = $this->_get_wallet_settings("wallet_currency") ?: "USD";
         return $this->template->view('Wallet_Plugin\Views\load_funds_modal', $view_data);
     }
 
     // Add funds to wallet
     public function add_funds() {
+        if (!$this->_can_access_wallet()) {
+            echo json_encode(array("success" => false, "message" => app_lang("access_denied")));
+            return;
+        }
+        
         $this->validate_submitted_data(array(
             "amount" => "required|numeric"
         ));
@@ -133,7 +153,7 @@ class Wallet_Plugin extends Security_Controller {
         $login_user_id = $this->login_user->id;
 
         if ($amount <= 0) {
-            echo json_encode(array("success" => false, "message" => \app_lang("invalid_amount")));
+            echo json_encode(array("success" => false, "message" => app_lang("invalid_amount")));
             return;
         }
 
@@ -144,7 +164,7 @@ class Wallet_Plugin extends Security_Controller {
         ));
 
         if (!$wallet->id) {
-            echo json_encode(array("success" => false, "message" => \app_lang("wallet_not_found")));
+            echo json_encode(array("success" => false, "message" => app_lang("wallet_not_found")));
             return;
         }
 
@@ -161,7 +181,7 @@ class Wallet_Plugin extends Security_Controller {
             "balance_before" => $wallet->balance,
             "balance_after" => $wallet->balance + $amount,
             "created_by" => $login_user_id,
-            "created_at" => \get_current_utc_date_time()
+            "created_at" => get_current_utc_date_time()
         );
 
         $transaction_id = $Wallet_transactions_model->ci_save($transaction_data);
@@ -170,28 +190,33 @@ class Wallet_Plugin extends Security_Controller {
             // Update wallet balance
             $Wallet_model->ci_save(array(
                 "balance" => $wallet->balance + $amount,
-                "updated_at" => \get_current_utc_date_time()
+                "updated_at" => get_current_utc_date_time()
             ), $wallet->id);
 
             // Send notification
-            \log_notification("wallet_credited", array(
+            log_notification("wallet_credited", array(
                 "wallet_transaction_id" => $transaction_id
             ), $login_user_id);
 
             echo json_encode(array(
                 "success" => true,
-                "message" => \app_lang("funds_added_successfully"),
+                "message" => app_lang("funds_added_successfully"),
                 "data" => array(
-                    "new_balance" => \to_currency($wallet->balance + $amount, $wallet->currency)
+                    "new_balance" => to_currency($wallet->balance + $amount, $wallet->currency)
                 )
             ));
         } else {
-            echo json_encode(array("success" => false, "message" => \app_lang("error_occurred")));
+            echo json_encode(array("success" => false, "message" => app_lang("error_occurred")));
         }
     }
 
     // Process wallet payment for invoice
     public function process_payment() {
+        if (!$this->_can_access_wallet()) {
+            echo json_encode(array("success" => false, "message" => app_lang("access_denied")));
+            return;
+        }
+        
         $this->validate_submitted_data(array(
             "invoice_id" => "required|numeric",
             "amount" => "required|numeric"
@@ -209,13 +234,13 @@ class Wallet_Plugin extends Security_Controller {
         ));
 
         if (!$wallet->id) {
-            echo json_encode(array("success" => false, "message" => \app_lang("wallet_not_found")));
+            echo json_encode(array("success" => false, "message" => app_lang("wallet_not_found")));
             return;
         }
 
         // Check balance
         if ($wallet->balance < $amount) {
-            echo json_encode(array("success" => false, "message" => \app_lang("insufficient_balance")));
+            echo json_encode(array("success" => false, "message" => app_lang("insufficient_balance")));
             return;
         }
 
@@ -233,7 +258,7 @@ class Wallet_Plugin extends Security_Controller {
             "balance_before" => $wallet->balance,
             "balance_after" => $wallet->balance - $amount,
             "created_by" => $login_user_id,
-            "created_at" => \get_current_utc_date_time()
+            "created_at" => get_current_utc_date_time()
         );
 
         $transaction_id = $Wallet_transactions_model->ci_save($transaction_data);
@@ -243,42 +268,47 @@ class Wallet_Plugin extends Security_Controller {
             $new_balance = $wallet->balance - $amount;
             $Wallet_model->ci_save(array(
                 "balance" => $new_balance,
-                "updated_at" => \get_current_utc_date_time()
+                "updated_at" => get_current_utc_date_time()
             ), $wallet->id);
 
             // Create invoice payment record
             $Invoice_payments_model = model("App\Models\Invoice_payments_model");
             $payment_data = array(
                 "invoice_id" => $invoice_id,
-                "payment_date" => \get_current_utc_date_time(),
+                "payment_date" => get_current_utc_date_time(),
                 "payment_method_id" => $this->_get_wallet_payment_method_id(),
                 "amount" => $amount,
                 "note" => "Paid via Wallet",
                 "created_by" => $login_user_id,
-                "created_at" => \get_current_utc_date_time()
+                "created_at" => get_current_utc_date_time()
             );
             $Invoice_payments_model->ci_save($payment_data);
 
             // Send notification
-            \log_notification("wallet_debited", array(
+            log_notification("wallet_debited", array(
                 "wallet_transaction_id" => $transaction_id
             ), $login_user_id);
 
             echo json_encode(array(
                 "success" => true,
-                "message" => \app_lang("payment_successful"),
+                "message" => app_lang("payment_successful"),
                 "data" => array(
-                    "new_balance" => \to_currency($new_balance, $wallet->currency),
+                    "new_balance" => to_currency($new_balance, $wallet->currency),
                     "transaction_id" => $transaction_id
                 )
             ));
         } else {
-            echo json_encode(array("success" => false, "message" => \app_lang("error_occurred")));
+            echo json_encode(array("success" => false, "message" => app_lang("error_occurred")));
         }
     }
 
     // Check wallet balance
     public function check_balance() {
+        if (!$this->_can_access_wallet()) {
+            echo json_encode(array("success" => false, "message" => app_lang("access_denied")));
+            return;
+        }
+        
         $login_user_id = $this->login_user->id;
         
         $Wallet_model = new \Wallet_Plugin\Models\Wallet_model();
@@ -291,13 +321,13 @@ class Wallet_Plugin extends Security_Controller {
             echo json_encode(array(
                 "success" => true,
                 "balance" => $wallet->balance,
-                "formatted_balance" => \to_currency($wallet->balance, $wallet->currency),
+                "formatted_balance" => to_currency($wallet->balance, $wallet->currency),
                 "currency" => $wallet->currency
             ));
         } else {
             echo json_encode(array(
                 "success" => false,
-                "message" => \app_lang("wallet_not_found")
+                "message" => app_lang("wallet_not_found")
             ));
         }
     }
@@ -330,7 +360,7 @@ class Wallet_Plugin extends Security_Controller {
             $Wallet_settings_model->save_setting($setting, $value);
         }
 
-        echo json_encode(array("success" => true, "message" => \app_lang("settings_updated")));
+        echo json_encode(array("success" => true, "message" => app_lang("settings_updated")));
     }
 
     // Client wallet tab
@@ -394,16 +424,16 @@ class Wallet_Plugin extends Security_Controller {
     }
 
     private function _make_admin_wallet_row($data) {
-        $user_link = \anchor(\get_uri("team_members/view/" . $data->user_id), $data->user_name);
+        $user_link = anchor(get_uri("team_members/view/" . $data->user_id), $data->user_name);
         
-        $actions = modal_\anchor(\get_uri("wallet_plugin/admin_adjust_balance/" . $data->id), 
+        $actions = modal_anchor(get_uri("wallet_plugin/admin_adjust_balance/" . $data->id), 
             "<i data-feather='edit' class='icon-16'></i>", 
-            array("class" => "edit", "title" => \app_lang("adjust_balance"), "data-post-id" => $data->id));
+            array("class" => "edit", "title" => app_lang("adjust_balance"), "data-post-id" => $data->id));
         
         return array(
             $user_link,
-            \to_currency($data->balance, $data->currency),
-            \format_to_datetime($data->updated_at),
+            to_currency($data->balance, $data->currency),
+            format_to_datetime($data->updated_at),
             $actions
         );
     }
