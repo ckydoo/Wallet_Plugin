@@ -1,7 +1,8 @@
 <?php 
 // Check if user is admin - if so, show client selector
-$is_admin = isset($is_admin) ? $is_admin : ($this->login_user->is_admin || $this->login_user->user_type === "admin");
-$target_user_id = isset($target_user_id) ? $target_user_id : $this->login_user->id;
+$is_admin = isset($is_admin) ? $is_admin : false;
+$all_users = isset($all_users) ? $all_users : array();
+$login_user_id = isset($login_user_id) ? $login_user_id : 0;
 ?>
 
 <?php echo form_open(get_uri("wallet_plugin/add_funds"), array("id" => "wallet-load-funds-form", "class" => "general-form", "role" => "form")); ?>
@@ -14,30 +15,31 @@ $target_user_id = isset($target_user_id) ? $target_user_id : $this->login_user->
         </label>
         <div class="col-md-9 col-sm-8">
             <?php
-            // Get list of all users (clients and staff)
-            $db = \Config\Database::connect();
-            $users = $db->table('rise_users')
-                ->where('deleted', 0)
-                ->get()
-                ->getResult();
+            // Build user options from the data passed from controller
+            $user_options = array('' => '-- Select User/Client --');
             
-            $user_options = array();
-            foreach ($users as $user) {
-                $user_type_label = $user->user_type === 'client' ? '(Client)' : '(Staff)';
-                $name = $user->first_name . ' ' . $user->last_name . ' ' . $user_type_label . ' - ' . $user->email;
-                $user_options[$user->id] = $name;
+            if (!empty($all_users)) {
+                foreach ($all_users as $user) {
+                    $user_type_label = $user->user_type === 'client' ? '(Client)' : '(Staff)';
+                    $name = $user->first_name . ' ' . $user->last_name . ' ' . $user_type_label . ' - ' . $user->email;
+                    $user_options[$user->id] = $name;
+                }
             }
             
             echo form_dropdown(
                 "target_user_id",
                 $user_options,
-                $target_user_id,
+                '',
                 array(
                     "id" => "target_user_id",
                     "class" => "form-control",
                     "required" => true
                 )
             );
+            
+            if (empty($all_users)) {
+                echo "<small class='text-warning'>No users found in the system</small>";
+            }
             ?>
             <small class="form-text text-muted">Select which user/client to load funds for</small>
         </div>
@@ -45,7 +47,11 @@ $target_user_id = isset($target_user_id) ? $target_user_id : $this->login_user->
 </div>
 <?php } else { ?>
     <!-- Hidden input for non-admin users - always their own ID -->
-    <input type="hidden" name="target_user_id" value="<?php echo $this->login_user->id; ?>">
+    <input type="hidden" name="target_user_id" value="<?php echo $login_user_id; ?>">
+    
+    <div class="alert alert-info">
+        <small>Funds will be loaded to your wallet</small>
+    </div>
 <?php } ?>
 
 <div class="form-group">

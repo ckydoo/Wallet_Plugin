@@ -126,7 +126,7 @@ class Wallet_Plugin extends Security_Controller {
         );
     }
 
-    // Modal to load funds
+    // Modal to load funds - FIXED VERSION
     public function load_funds_modal() {
         // Check access
         if (!$this->_can_access_wallet()) {
@@ -138,39 +138,27 @@ class Wallet_Plugin extends Security_Controller {
         $login_user_id = $this->login_user->id;
         $is_admin = $this->login_user->is_admin || $this->login_user->user_type === "admin";
         
-        // For admins, get target_user_id from request. For non-admins, use their own ID
-        $target_user_id = $this->request->getGet('target_user_id');
-        if ($target_user_id && $is_admin) {
-            // Admin can select any user
-            $check_user_id = $target_user_id;
-        } else {
-            // Non-admin always uses their own ID
-            $check_user_id = $login_user_id;
+        // Get all users for the dropdown (ONLY if admin)
+        $all_users = array();
+        if ($is_admin) {
+            $db = \Config\Database::connect();
+            $db_prefix = $db->getPrefix();
+            
+            // Use raw query to get users
+            $sql = "SELECT id, first_name, last_name, email, user_type FROM " . $db_prefix . "users WHERE deleted = 0 ORDER BY first_name, last_name";
+            
+            try {
+                $result = $db->query($sql);
+                $all_users = $result->getResult();
+            } catch (\Exception $e) {
+                // If query fails, leave $all_users empty
+                $all_users = array();
+            }
         }
         
-        // Get or create wallet for the target user
-        $wallet = $Wallet_model->get_one_where(array(
-            "user_id" => $check_user_id,
-            "deleted" => 0
-        ));
-        
-        // If no wallet exists, create one
-        if (!$wallet || !$wallet->id) {
-            $wallet_currency = $this->_get_wallet_settings("wallet_currency") ?: "USD";
-            $wallet_data = array(
-                "user_id" => $check_user_id,
-                "balance" => 0,
-                "currency" => $wallet_currency,
-                "created_at" => get_current_utc_date_time(),
-                "updated_at" => get_current_utc_date_time()
-            );
-            $wallet_id = $Wallet_model->insert($wallet_data);
-            $wallet = $Wallet_model->get_one($wallet_id);
-        }
-        
-        $view_data['wallet'] = $wallet;
+        $view_data['all_users'] = $all_users;
         $view_data['is_admin'] = $is_admin;
-        $view_data['target_user_id'] = $check_user_id;
+        $view_data['login_user_id'] = $login_user_id;
         
         // Use the correct view path for RISE
         return $this->template->view('Wallet_Plugin\Views\load_funds_modal', $view_data);
