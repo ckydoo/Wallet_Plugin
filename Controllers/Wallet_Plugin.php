@@ -7,18 +7,18 @@ use App\Controllers\Security_Controller;
 class Wallet_Plugin extends Security_Controller {
 
     public function __construct() {
-    parent::__construct();
-    
-    // Check if user is logged in
-    if (!$this->login_user->id) {
-        redirect('signin');
+        parent::__construct();
+        
+        // Check if user is logged in
+        if (!$this->login_user->id) {
+            redirect('signin');
+        }
+        
+        // Only allow staff and client user types
+        if (!in_array($this->login_user->user_type, array("staff", "client"))) {
+            show_404();
+        }
     }
-    
-    // Only allow staff and client user types
-    if (!in_array($this->login_user->user_type, array("staff", "client"))) {
-        show_404();
-    }
-}
     
     // Helper to check if user can access wallet
     private function _can_access_wallet() {
@@ -106,139 +106,181 @@ class Wallet_Plugin extends Security_Controller {
     }
 
     private function _make_transaction_row($data) {
-    $transaction_type = $data->transaction_type == "credit" 
-        ? "<span class='badge badge-success'>" . wallet_lang("credit") . "</span>"
-        : "<span class='badge badge-danger'>" . wallet_lang("debit") . "</span>";
-    
-    $amount = to_currency($data->amount, $data->currency);
-    if ($data->transaction_type == "debit") {
-        $amount = "-" . $amount;
-    } else {
-        $amount = "+" . $amount;
-    }
-    
-    return array(
-        format_to_datetime($data->created_at),
-        $transaction_type,
-        $amount,
-        $data->description ?: "-",
-        to_currency($data->balance_after, $data->currency)
-    );
-}
-
-// Modal to load funds
-public function load_funds_modal() {
-    // Check access
-    if (!$this->_can_access_wallet()) {
-        echo "Access denied";
-        return;
-    }
-    
-    $Wallet_model = new \Wallet_Plugin\Models\Wallet_model();
-    $login_user_id = $this->login_user->id;
-    
-    // Get or create wallet
-    $wallet = $Wallet_model->get_one_where(array(
-        "user_id" => $login_user_id,
-        "deleted" => 0
-    ));
-    
-    // If no wallet exists, create one
-    if (!$wallet || !$wallet->id) {
-        $wallet_currency = $this->_get_wallet_settings("wallet_currency") ?: "USD";
-        $wallet_data = array(
-            "user_id" => $login_user_id,
-            "balance" => 0,
-            "currency" => $wallet_currency,
-            "created_at" => get_current_utc_date_time(),
-            "updated_at" => get_current_utc_date_time()
+        $transaction_type = $data->transaction_type == "credit" 
+            ? "<span class='badge badge-success'>" . wallet_lang("credit") . "</span>"
+            : "<span class='badge badge-danger'>" . wallet_lang("debit") . "</span>";
+        
+        $amount = to_currency($data->amount, $data->currency);
+        if ($data->transaction_type == "debit") {
+            $amount = "-" . $amount;
+        } else {
+            $amount = "+" . $amount;
+        }
+        
+        return array(
+            format_to_datetime($data->created_at),
+            $transaction_type,
+            $amount,
+            $data->description ?: "-",
+            to_currency($data->balance_after, $data->currency)
         );
-        $wallet_id = $Wallet_model->ci_save($wallet_data);
-        $wallet = $Wallet_model->get_one($wallet_id);
-    }
-    
-    $view_data['wallet'] = $wallet;
-    
-    // Use the correct view path for RISE
-    return $this->template->view('Wallet_Plugin\Views\load_funds_modal', $view_data);
-}
-
-    // Add funds to wallet
-    // Add funds to wallet
-public function add_funds() {
-    if (!$this->_can_access_wallet()) {
-        echo json_encode(array("success" => false, "message" => "Access denied"));
-        return;
-    }
-    
-    $this->validate_submitted_data(array(
-        "amount" => "required|numeric"
-    ));
-
-    $amount = $this->request->getPost("amount");
-    $description = $this->request->getPost("description");
-    $login_user_id = $this->login_user->id;
-
-    if ($amount <= 0) {
-        echo json_encode(array("success" => false, "message" => "Invalid amount"));
-        return;
     }
 
-    $Wallet_model = new \Wallet_Plugin\Models\Wallet_model();
-    $wallet = $Wallet_model->get_one_where(array(
-        "user_id" => $login_user_id,
-        "deleted" => 0
-    ));
-
-    if (!$wallet || !$wallet->id) {
-        echo json_encode(array("success" => false, "message" => "Wallet not found"));
-        return;
+    // Modal to load funds
+    public function load_funds_modal() {
+        // Check access
+        if (!$this->_can_access_wallet()) {
+            echo "Access denied";
+            return;
+        }
+        
+        $Wallet_model = new \Wallet_Plugin\Models\Wallet_model();
+        $login_user_id = $this->login_user->id;
+        $is_admin = $this->login_user->is_admin || $this->login_user->user_type === "admin";
+        
+        // For admins, get target_user_id from request. For non-admins, use their own ID
+        $target_user_id = $this->request->getGet('target_user_id');
+        if ($target_user_id && $is_admin) {
+            // Admin can select any user
+            $check_user_id = $target_user_id;
+        } else {
+            // Non-admin always uses their own ID
+            $check_user_id = $login_user_id;
+        }
+        
+        // Get or create wallet for the target user
+        $wallet = $Wallet_model->get_one_where(array(
+            "user_id" => $check_user_id,
+            "deleted" => 0
+        ));
+        
+        // If no wallet exists, create one
+        if (!$wallet || !$wallet->id) {
+            $wallet_currency = $this->_get_wallet_settings("wallet_currency") ?: "USD";
+            $wallet_data = array(
+                "user_id" => $check_user_id,
+                "balance" => 0,
+                "currency" => $wallet_currency,
+                "created_at" => get_current_utc_date_time(),
+                "updated_at" => get_current_utc_date_time()
+            );
+            $wallet_id = $Wallet_model->insert($wallet_data);
+            $wallet = $Wallet_model->get_one($wallet_id);
+        }
+        
+        $view_data['wallet'] = $wallet;
+        $view_data['is_admin'] = $is_admin;
+        $view_data['target_user_id'] = $check_user_id;
+        
+        // Use the correct view path for RISE
+        return $this->template->view('Wallet_Plugin\Views\load_funds_modal', $view_data);
     }
 
-    // Get current UTC datetime
-    $current_time = date('Y-m-d H:i:s');
-    $new_balance = floatval($wallet->balance) + floatval($amount);
+    // Add funds to wallet - UPDATED TO SUPPORT ADMIN LOADING FUNDS FOR CLIENTS
+    public function add_funds() {
+        if (!$this->_can_access_wallet()) {
+            echo json_encode(array("success" => false, "message" => "Access denied"));
+            return;
+        }
+        
+        $this->validate_submitted_data(array(
+            "amount" => "required|numeric"
+        ));
 
-    // Add transaction record
-    $Wallet_transactions_model = new \Wallet_Plugin\Models\Wallet_transactions_model();
-    
-    $transaction_data = array(
-        "wallet_id" => $wallet->id,
-        "user_id" => $login_user_id,
-        "transaction_type" => "credit",
-        "amount" => $amount,
-        "currency" => $wallet->currency,
-        "reference_type" => "manual",
-        "description" => $description ? $description : "Manual funds added",
-        "balance_before" => $wallet->balance,
-        "balance_after" => $new_balance,
-        "created_by" => $login_user_id,
-        "created_at" => $current_time,
-        "deleted" => 0
-    );
-    
-    $transaction_id = $Wallet_transactions_model->insert($transaction_data);
+        $amount = $this->request->getPost("amount");
+        $description = $this->request->getPost("description");
+        $target_user_id = $this->request->getPost("target_user_id");
+        $login_user_id = $this->login_user->id;
+        $is_admin = $this->login_user->is_admin || $this->login_user->user_type === "admin";
 
-    if ($transaction_id) {
-        // Update wallet balance
-        $wallet_update = array(
-            "balance" => $new_balance,
-            "updated_at" => $current_time
+        // If no target_user_id provided, use the logged-in user
+        if (!$target_user_id) {
+            $target_user_id = $login_user_id;
+        }
+
+        // SECURITY CHECK: Only admins can load funds for other users
+        if ($target_user_id != $login_user_id && !$is_admin) {
+            echo json_encode(array("success" => false, "message" => "You can only load funds for your own wallet"));
+            return;
+        }
+
+        if ($amount <= 0) {
+            echo json_encode(array("success" => false, "message" => "Invalid amount"));
+            return;
+        }
+
+        $Wallet_model = new \Wallet_Plugin\Models\Wallet_model();
+        
+        // Get wallet for TARGET USER (not necessarily the logged-in user)
+        $wallet = $Wallet_model->get_one_where(array(
+            "user_id" => $target_user_id,
+            "deleted" => 0
+        ));
+
+        if (!$wallet || !$wallet->id) {
+            // Auto-create wallet if enabled
+            if ($this->_get_wallet_settings("auto_create_wallet") == "1") {
+                $wallet_currency = $this->_get_wallet_settings("wallet_currency") ?: "USD";
+                $wallet_data = array(
+                    "user_id" => $target_user_id,
+                    "balance" => 0,
+                    "currency" => $wallet_currency,
+                    "created_at" => get_current_utc_date_time(),
+                    "updated_at" => get_current_utc_date_time()
+                );
+                $wallet_id = $Wallet_model->insert($wallet_data);
+                $wallet = $Wallet_model->get_one($wallet_id);
+            } else {
+                echo json_encode(array("success" => false, "message" => "Wallet not found"));
+                return;
+            }
+        }
+
+        // Get current UTC datetime
+        $current_time = date('Y-m-d H:i:s');
+        $new_balance = floatval($wallet->balance) + floatval($amount);
+
+        // Add transaction record
+        $Wallet_transactions_model = new \Wallet_Plugin\Models\Wallet_transactions_model();
+        
+        $transaction_data = array(
+            "wallet_id" => $wallet->id,
+            "user_id" => $target_user_id,  // Record for target user
+            "transaction_type" => "credit",
+            "amount" => $amount,
+            "currency" => $wallet->currency,
+            "reference_type" => "manual",
+            "description" => $description ? $description : "Manual funds added",
+            "balance_before" => $wallet->balance,
+            "balance_after" => $new_balance,
+            "created_by" => $login_user_id,  // Track who added the funds (admin)
+            "created_at" => $current_time,
+            "deleted" => 0
         );
         
-        $Wallet_model->update($wallet->id, $wallet_update);
+        $transaction_id = $Wallet_transactions_model->insert($transaction_data);
 
-        echo json_encode(array(
-            "success" => true,
-            "message" => "Funds added successfully",
-            "data" => array(
-                "new_balance" => number_format($new_balance, 2) . " " . $wallet->currency
-            )
-        ));
-    } else {
-        echo json_encode(array("success" => false, "message" => "Error occurred while adding funds"));
+        if ($transaction_id) {
+            // Update wallet balance
+            $wallet_update = array(
+                "balance" => $new_balance,
+                "updated_at" => $current_time
+            );
+            
+            $Wallet_model->update($wallet->id, $wallet_update);
+
+            echo json_encode(array(
+                "success" => true,
+                "message" => "Funds added successfully",
+                "data" => array(
+                    "new_balance" => number_format($new_balance, 2) . " " . $wallet->currency
+                )
+            ));
+        } else {
+            echo json_encode(array("success" => false, "message" => "Error occurred while adding funds"));
+        }
     }
-}
+
     // Process wallet payment for invoice
     public function process_payment() {
         if (!$this->_can_access_wallet()) {

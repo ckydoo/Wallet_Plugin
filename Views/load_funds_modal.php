@@ -1,4 +1,52 @@
+<?php 
+// Check if user is admin - if so, show client selector
+$is_admin = isset($is_admin) ? $is_admin : ($this->login_user->is_admin || $this->login_user->user_type === "admin");
+$target_user_id = isset($target_user_id) ? $target_user_id : $this->login_user->id;
+?>
+
 <?php echo form_open(get_uri("wallet_plugin/add_funds"), array("id" => "wallet-load-funds-form", "class" => "general-form", "role" => "form")); ?>
+
+<?php if ($is_admin) { ?>
+<div class="form-group">
+    <div class="row">
+        <label for="target_user_id" class="col-md-3 col-sm-4">
+            <?php echo "Select User/Client"; ?>
+        </label>
+        <div class="col-md-9 col-sm-8">
+            <?php
+            // Get list of all users (clients and staff)
+            $db = \Config\Database::connect();
+            $users = $db->table('rise_users')
+                ->where('deleted', 0)
+                ->get()
+                ->getResult();
+            
+            $user_options = array();
+            foreach ($users as $user) {
+                $user_type_label = $user->user_type === 'client' ? '(Client)' : '(Staff)';
+                $name = $user->first_name . ' ' . $user->last_name . ' ' . $user_type_label . ' - ' . $user->email;
+                $user_options[$user->id] = $name;
+            }
+            
+            echo form_dropdown(
+                "target_user_id",
+                $user_options,
+                $target_user_id,
+                array(
+                    "id" => "target_user_id",
+                    "class" => "form-control",
+                    "required" => true
+                )
+            );
+            ?>
+            <small class="form-text text-muted">Select which user/client to load funds for</small>
+        </div>
+    </div>
+</div>
+<?php } else { ?>
+    <!-- Hidden input for non-admin users - always their own ID -->
+    <input type="hidden" name="target_user_id" value="<?php echo $this->login_user->id; ?>">
+<?php } ?>
 
 <div class="form-group">
     <div class="row">
