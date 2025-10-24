@@ -2,7 +2,7 @@
 
 <div class="form-group">
     <div class="row">
-        <label for="amount" class="col-md-3 col-sm-4"><?php echo app_lang('amount'); ?></label>
+        <label for="amount" class="col-md-3 col-sm-4"><?php echo wallet_lang('amount'); ?></label>
         <div class="col-md-9 col-sm-8">
             <?php
             echo form_input(array(
@@ -10,7 +10,7 @@
                 "name" => "amount",
                 "value" => "",
                 "class" => "form-control",
-                "placeholder" => app_lang('amount'),
+                "placeholder" => wallet_lang('amount'),
                 "type" => "number",
                 "step" => "0.01",
                 "min" => "0.01",
@@ -25,7 +25,7 @@
 
 <div class="form-group">
     <div class="row">
-        <label for="description" class="col-md-3 col-sm-4"><?php echo app_lang('description'); ?></label>
+        <label for="description" class="col-md-3 col-sm-4"><?php echo wallet_lang('description'); ?></label>
         <div class="col-md-9 col-sm-8">
             <?php
             echo form_textarea(array(
@@ -33,7 +33,7 @@
                 "name" => "description",
                 "value" => "",
                 "class" => "form-control",
-                "placeholder" => app_lang('description') . ' (' . app_lang('optional') . ')',
+                "placeholder" => wallet_lang('description') . ' (' . app_lang('optional') . ')',
                 "rows" => 3
             ));
             ?>
@@ -46,7 +46,7 @@
         <div class="col-md-12">
             <p class="text-muted">
                 <i data-feather="info" class="icon-16"></i>
-                <?php echo app_lang('wallet_load_funds_note'); ?>
+                <?php echo wallet_lang('wallet_load_funds_note'); ?>
             </p>
         </div>
     </div>
@@ -57,7 +57,7 @@
         <span data-feather="x" class="icon-16"></span> <?php echo app_lang('close'); ?>
     </button>
     <button type="submit" class="btn btn-primary">
-        <span data-feather="check-circle" class="icon-16"></span> <?php echo app_lang('add_funds'); ?>
+        <span data-feather="check-circle" class="icon-16"></span> <?php echo wallet_lang('add_funds'); ?>
     </button>
 </div>
 
@@ -79,7 +79,6 @@
             }
         });
         
-        // Re-initialize feather icons
         if (typeof feather !== 'undefined') {
             feather.replace();
         }

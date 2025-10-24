@@ -8,22 +8,67 @@ Plugin URL: https://yourwebsite.com/wallet-plugin
 Description: A comprehensive wallet system that allows users and admins to load funds and use them to pay for invoices and other transactions in the system. Clients can view their wallet balance and transaction history.
 Version: 1.0
 Requires at least: 2.8
-Author: Your Name
-Author URL: https://yourwebsite.com
+Author: Ckydoo Chikangaiso
+Author URL: codzlabzim53@gmail.com
 */
 
+// Define wallet_lang helper function for plugin
+if (!function_exists('wallet_lang')) {
+    function wallet_lang($key) {
+        static $lang_data = null;
+        
+        // Load language file on first call
+        if ($lang_data === null) {
+            $lang_data = array();
+            $user_language = get_setting('user_language') ?: 'english';
+            $lang_file = PLUGINPATH . 'Wallet_Plugin/Language/' . $user_language . '/wallet_plugin_lang.php';
+            
+            // Fallback to English if user language file doesn't exist
+            if (!file_exists($lang_file)) {
+                $lang_file = PLUGINPATH . 'Wallet_Plugin/Language/english/wallet_plugin_lang.php';
+            }
+            
+            if (file_exists($lang_file)) {
+                $lang = array();
+                include($lang_file);
+                $lang_data = $lang;
+            }
+        }
+        
+        // Return language value or key if not found
+        return isset($lang_data[$key]) ? $lang_data[$key] : ucwords(str_replace('_', ' ', $key));
+    }
+}
+
+// IMPORTANT: Load plugin language into RISE's core language system EARLY
+app_hooks()->add_action('app_hook_pre_controller', function() {
+    $user_language = get_setting('user_language') ?: 'english';
+    $lang_file = PLUGINPATH . 'Wallet_Plugin/Language/' . $user_language . '/wallet_plugin_lang.php';
+    
+    // Fallback to English
+    if (!file_exists($lang_file)) {
+        $lang_file = PLUGINPATH . 'Wallet_Plugin/Language/english/wallet_plugin_lang.php';
+    }
+    
+    if (file_exists($lang_file)) {
+        $lang = array();
+        include($lang_file);
+        
+        // Inject into RISE's language system
+        if (!isset($GLOBALS['_app_lang'])) {
+            $GLOBALS['_app_lang'] = array();
+        }
+        
+        foreach ($lang as $key => $value) {
+            $GLOBALS['_app_lang'][$key] = $value;
+        }
+    }
+});
 
 // Register installation hook
 register_installation_hook("Wallet_Plugin", function ($item_purchase_code) {
-    // Validate purchase code if needed
-    // if (!validate_purchase_code($item_purchase_code)) {
-    //     echo json_encode(array("success" => false, 'message' => "Invalid purchase code"));
-    //     exit();
-    // }
-    
-    // Run SQL queries to create necessary tables
     $db = db_connect('default');
-    $db_prefix = $db->getPrefix(); // Get prefix without 'rise_' duplication
+    $db_prefix = $db->getPrefix();
     $db->query("SET sql_mode = ''");
     
     // Create wallet table
@@ -100,13 +145,7 @@ register_installation_hook("Wallet_Plugin", function ($item_purchase_code) {
 
 // Register uninstallation hook
 register_uninstallation_hook("Wallet_Plugin", function () {
-    $db = db_connect('default');
-    $db_prefix = $db->getPrefix();
-    
-    // Optional: Drop tables (commented out for safety - uncomment if you want to delete data on uninstall)
-    // $db->query("DROP TABLE IF EXISTS `" . $db_prefix . "wallet`");
-    // $db->query("DROP TABLE IF EXISTS `" . $db_prefix . "wallet_transactions`");
-    // $db->query("DROP TABLE IF EXISTS `" . $db_prefix . "wallet_settings`");
+    // Optional: cleanup code
 });
 
 // Register activation hook
@@ -114,10 +153,7 @@ register_activation_hook("Wallet_Plugin", function () {
     $db = db_connect('default');
     $db_prefix = $db->getPrefix();
     
-    // Restore payment method
     $db->query("UPDATE `" . $db_prefix . "payment_methods` SET deleted = 0 WHERE type = 'wallet_payment'");
-    
-    // Restore notification settings
     $db->query("UPDATE `" . $db_prefix . "notification_settings` SET deleted = 0 WHERE category = 'wallet'");
 });
 
@@ -126,10 +162,7 @@ register_deactivation_hook("Wallet_Plugin", function () {
     $db = db_connect('default');
     $db_prefix = $db->getPrefix();
     
-    // Hide payment method
     $db->query("UPDATE `" . $db_prefix . "payment_methods` SET deleted = 1 WHERE type = 'wallet_payment'");
-    
-    // Hide notification settings
     $db->query("UPDATE `" . $db_prefix . "notification_settings` SET deleted = 1 WHERE category = 'wallet'");
 });
 
@@ -141,33 +174,11 @@ app_hooks()->add_filter('app_filter_action_links_of_Wallet_Plugin', function ($a
     );
     return $action_links_array;
 });
-// Register custom language file
-app_hooks()->add_action('app_hook_pre_controller', function() {
-    // Load the plugin language file
-    $language = get_setting('user_language') ?: 'english';
-    $lang_file = PLUGINPATH . 'Wallet_Plugin/Language/' . $language . '/wallet_plugin_lang.php';
-    
-    if (file_exists($lang_file)) {
-        include_once($lang_file);
-        
-        // Merge into CodeIgniter language instance
-        if (isset($lang) && is_array($lang)) {
-            $ci_lang = \Config\Services::language();
-            $existing = $ci_lang->getLocale();
-            
-            foreach ($lang as $key => $value) {
-                // Add to language array
-                if (!$ci_lang->getLine($key)) {
-                    // Store in language service
-                }
-            }
-        }
-    }
-});
+
 // Add payment method settings
 app_hooks()->add_filter('app_filter_payment_method_settings', function($settings) {
     $settings["wallet_payment"] = array(
-        array("name" => "pay_button_text", "text" => \app_lang("pay_button_text"), "type" => "text", "default" => "Pay from Wallet"),
+        array("name" => "pay_button_text", "text" => wallet_lang("pay_button_text"), "type" => "text", "default" => "Pay from Wallet"),
         array("name" => "wallet_description", "text" => "Wallet Description", "type" => "text", "default" => "Use your wallet balance to make this payment"),
     );
     return $settings;
@@ -182,8 +193,8 @@ app_hooks()->add_action('app_hook_invoice_payment_extension', function($payment_
 
 // Add menu item for staff users
 app_hooks()->add_filter('app_filter_staff_left_menu', function ($sidebar_menu) {
-    $sidebar_menu["wallet"] = array(
-        "name" => "wallet",
+    $sidebar_menu["wallet_plugin_menu"] = array(
+        "name" => "Wallet",  // Hardcoded - will always show "Wallet"
         "url" => "wallet_plugin/index",
         "class" => "credit-card",
         "position" => 15
@@ -193,8 +204,8 @@ app_hooks()->add_filter('app_filter_staff_left_menu', function ($sidebar_menu) {
 
 // Add menu item for client users
 app_hooks()->add_filter('app_filter_client_left_menu', function ($sidebar_menu) {
-    $sidebar_menu["wallet"] = array(
-        "name" => "wallet",
+    $sidebar_menu["wallet_plugin_menu"] = array(
+        "name" => "Wallet",  // Hardcoded - will always show "Wallet"
         "url" => "wallet_plugin/index",
         "class" => "credit-card",
         "position" => 10
@@ -213,7 +224,7 @@ app_hooks()->add_filter('app_filter_dashboard_widget', function ($default_widget
 
 // Add notification category
 app_hooks()->add_filter('app_filter_notification_category_suggestion', function ($category_suggestions) {
-    $category_suggestions[] = array("id" => "wallet", "text" => \app_lang("wallet"));
+    $category_suggestions[] = array("id" => "wallet", "text" => "wallet");
     return $category_suggestions;
 });
 
@@ -243,14 +254,25 @@ app_hooks()->add_filter('app_filter_notification_config', function ($events_of_h
 
 // Add settings menu item
 app_hooks()->add_filter('app_filter_admin_settings_menu', function($settings_menu) {
-    $settings_menu["setup"][] = array("name" => "wallet_settings", "url" => "wallet_plugin/settings");
+    $settings_menu["setup"][] = array(
+        "name" => "Wallet Settings",  // Hardcoded - will always show "Wallet Settings"
+        "url" => "wallet_plugin/settings"
+    );
     return $settings_menu;
 });
-
+app_hooks()->add_filter('app_filter_admin_left_menu', function ($sidebar_menu) {
+    $sidebar_menu["wallet_management"] = array(
+        "name" => "Manage Wallets",  // HARDCODED
+        "url" => "wallet_plugin/admin_manage_wallets",
+        "class" => "credit-card",
+        "position" => 15
+    );
+    return $sidebar_menu;
+});
 // Add client details tab
 app_hooks()->add_filter('app_filter_client_details_ajax_tab', function ($hook_tabs, $client_id) {
     $hook_tabs[] = array(
-        "title" => \app_lang("wallet"),
+        "title" => 'Wallet',
         "url" => \get_uri("wallet_plugin/client_wallet/" . $client_id),
         "target" => "wallet-tab"
     );
@@ -260,7 +282,7 @@ app_hooks()->add_filter('app_filter_client_details_ajax_tab', function ($hook_ta
 // Add staff profile tab
 app_hooks()->add_filter('app_filter_staff_profile_ajax_tab', function ($hook_tabs, $user_id) {
     $hook_tabs[] = array(
-        "title" => \app_lang("wallet"),
+        "title" => 'Wallet',
         "url" => \get_uri("wallet_plugin/user_wallet/" . $user_id),
         "target" => "wallet-tab"
     );

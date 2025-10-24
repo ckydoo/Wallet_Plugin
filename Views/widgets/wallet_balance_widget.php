@@ -20,10 +20,10 @@ if ($login_user_id) {
         </div>
         <div class="widget-details">
             <h1><?php echo to_currency($wallet->balance, $wallet->currency); ?></h1>
-            <span class="bg-transparent-white"><?php echo app_lang("wallet_balance"); ?></span>
+            <span class="bg-transparent-white">Wallet Balance</span> <!-- Hardcoded -->
         </div>
         <a href="<?php echo get_uri('wallet_plugin/index'); ?>" class="widget-link">
-            <i data-feather="circle" class="icon-16"></i> <?php echo app_lang("view_details"); ?>
+            <i data-feather="circle" class="icon-16"></i> View Details <!-- Hardcoded -->
         </a>
     </div>
 </div>

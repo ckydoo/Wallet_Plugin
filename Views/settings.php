@@ -1,37 +1,37 @@
 <div class="card">
     <div class="page-title clearfix">
-        <h1><?php echo app_lang('wallet_settings'); ?></h1>
+        <h1><?php echo wallet_lang('wallet_settings'); ?></h1>
     </div>
 
     <div class="card-body">
         <?php echo form_open(get_uri("wallet_plugin/save_settings"), array("id" => "wallet-settings-form", "class" => "general-form", "role" => "form")); ?>
         
         <div class="form-group">
-            <label for="wallet_enabled" class="col-md-3"><?php echo app_lang('enable_wallet'); ?></label>
+            <label for="wallet_enabled" class="col-md-3"><?php echo wallet_lang('enable_wallet'); ?></label>
             <div class="col-md-9">
                 <?php
                 echo form_checkbox("wallet_enabled", "1", 
                     get_array_value($wallet_settings, "wallet_enabled") == "1" ? true : false, 
                     "id='wallet_enabled' class='form-check-input'");
                 ?>
-                <span class="form-check-label"><?php echo app_lang('enable_wallet_system'); ?></span>
+                <span class="form-check-label"><?php echo wallet_lang('enable_wallet_system'); ?></span>
             </div>
         </div>
 
         <div class="form-group">
-            <label for="auto_create_wallet" class="col-md-3"><?php echo app_lang('auto_create_wallet'); ?></label>
+            <label for="auto_create_wallet" class="col-md-3"><?php echo wallet_lang('auto_create_wallet'); ?></label>
             <div class="col-md-9">
                 <?php
                 echo form_checkbox("auto_create_wallet", "1", 
                     get_array_value($wallet_settings, "auto_create_wallet") == "1" ? true : false, 
                     "id='auto_create_wallet' class='form-check-input'");
                 ?>
-                <span class="form-check-label"><?php echo app_lang('auto_create_wallet_for_users'); ?></span>
+                <span class="form-check-label"><?php echo wallet_lang('auto_create_wallet_for_users'); ?></span>
             </div>
         </div>
 
         <div class="form-group">
-            <label for="wallet_currency" class="col-md-3"><?php echo app_lang('wallet_currency'); ?></label>
+            <label for="wallet_currency" class="col-md-3"><?php echo wallet_lang('wallet_currency'); ?></label>
             <div class="col-md-9">
                 <?php
                 echo form_input(array(
@@ -42,12 +42,12 @@
                     "placeholder" => "USD"
                 ));
                 ?>
-                <small class="form-text text-muted"><?php echo app_lang('default_currency_for_wallets'); ?></small>
+                <small class="form-text text-muted"><?php echo wallet_lang('default_currency_for_wallets'); ?></small>
             </div>
         </div>
 
         <div class="form-group">
-            <label for="minimum_balance" class="col-md-3"><?php echo app_lang('minimum_balance'); ?></label>
+            <label for="minimum_balance" class="col-md-3"><?php echo wallet_lang('minimum_balance'); ?></label>
             <div class="col-md-9">
                 <?php
                 echo form_input(array(
@@ -60,19 +60,19 @@
                     "min" => "0"
                 ));
                 ?>
-                <small class="form-text text-muted"><?php echo app_lang('minimum_balance_required'); ?></small>
+                <small class="form-text text-muted"><?php echo wallet_lang('minimum_balance_required'); ?></small>
             </div>
         </div>
 
         <div class="form-group">
-            <label for="allow_negative_balance" class="col-md-3"><?php echo app_lang('allow_negative_balance'); ?></label>
+            <label for="allow_negative_balance" class="col-md-3"><?php echo wallet_lang('allow_negative_balance'); ?></label>
             <div class="col-md-9">
                 <?php
                 echo form_checkbox("allow_negative_balance", "1", 
                     get_array_value($wallet_settings, "allow_negative_balance") == "1" ? true : false, 
                     "id='allow_negative_balance' class='form-check-input'");
                 ?>
-                <span class="form-check-label"><?php echo app_lang('allow_users_to_have_negative_balance'); ?></span>
+                <span class="form-check-label"><?php echo wallet_lang('allow_users_to_have_negative_balance'); ?></span>
             </div>
         </div>
 

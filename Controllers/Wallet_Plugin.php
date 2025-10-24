@@ -106,27 +106,26 @@ class Wallet_Plugin extends Security_Controller {
     }
 
     private function _make_transaction_row($data) {
-        $transaction_type = $data->transaction_type == "credit" 
-            ? "<span class='badge badge-success'>" . app_lang("credit") . "</span>"
-            : "<span class='badge badge-danger'>" . app_lang("debit") . "</span>";
-        
-        $amount = to_currency($data->amount, $data->currency);
-        if ($data->transaction_type == "debit") {
-            $amount = "-" . $amount;
-        } else {
-            $amount = "+" . $amount;
-        }
-        
-        return array(
-            format_to_datetime($data->created_at),
-            $transaction_type,
-            $amount,
-            $data->description ?: "-",
-            to_currency($data->balance_after, $data->currency)
-        );
+    $transaction_type = $data->transaction_type == "credit" 
+        ? "<span class='badge badge-success'>" . wallet_lang("credit") . "</span>"
+        : "<span class='badge badge-danger'>" . wallet_lang("debit") . "</span>";
+    
+    $amount = to_currency($data->amount, $data->currency);
+    if ($data->transaction_type == "debit") {
+        $amount = "-" . $amount;
+    } else {
+        $amount = "+" . $amount;
     }
+    
+    return array(
+        format_to_datetime($data->created_at),
+        $transaction_type,
+        $amount,
+        $data->description ?: "-",
+        to_currency($data->balance_after, $data->currency)
+    );
+}
 
-    // Modal to load funds
 // Modal to load funds
 public function load_funds_modal() {
     // Check access
