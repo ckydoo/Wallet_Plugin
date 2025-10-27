@@ -11,10 +11,11 @@ $routes->post('wallet_plugin/save', 'Wallet_Plugin::save', ['namespace' => 'Wall
 $routes->post('wallet_plugin/delete', 'Wallet_Plugin::delete', ['namespace' => 'Wallet_Plugin\Controllers']);
 $routes->get('wallet_plugin/list_data', 'Wallet_Plugin::list_data', ['namespace' => 'Wallet_Plugin\Controllers']);
 
-// Transaction routes   
+// Transaction routes - IMPORTANT: These must be BEFORE generic routes
 $routes->get('wallet_plugin/transactions', 'Wallet_Plugin::transactions', ['namespace' => 'Wallet_Plugin\Controllers']);
 $routes->get('wallet_plugin/transaction_details/(:num)', 'Wallet_Plugin::transaction_details/$1', ['namespace' => 'Wallet_Plugin\Controllers']);
 $routes->get('wallet_plugin/transaction_list_data', 'Wallet_Plugin::transaction_list_data', ['namespace' => 'Wallet_Plugin\Controllers']);
+$routes->post('wallet_plugin/transaction_list_data', 'Wallet_Plugin::transaction_list_data', ['namespace' => 'Wallet_Plugin\Controllers']);
 
 // Load funds routes
 $routes->get('wallet_plugin/load_funds_modal', 'Wallet_Plugin::load_funds_modal', ['namespace' => 'Wallet_Plugin\Controllers']);
@@ -36,3 +37,8 @@ $routes->get('wallet_plugin/user_wallet/(:num)', 'Wallet_Plugin::user_wallet/$1'
 $routes->get('wallet_plugin/admin_manage_wallets', 'Wallet_Plugin::admin_manage_wallets', ['namespace' => 'Wallet_Plugin\Controllers']);
 $routes->get('wallet_plugin/admin_wallet_list_data', 'Wallet_Plugin::admin_wallet_list_data', ['namespace' => 'Wallet_Plugin\Controllers']);
 $routes->post('wallet_plugin/admin_adjust_balance', 'Wallet_Plugin::admin_adjust_balance', ['namespace' => 'Wallet_Plugin\Controllers']);
+// Balance check for admin
+$routes->get('wallet_plugin/check_client_balance', 'Wallet_Plugin::check_client_balance', ['namespace' => 'Wallet_Plugin\Controllers']);
+$routes->post('wallet_plugin/check_client_balance', 'Wallet_Plugin::check_client_balance', ['namespace' => 'Wallet_Plugin\Controllers']);
+// Debug route (remove after testing)
+$routes->get('wallet_plugin/debug_transactions', 'Wallet_Plugin::debug_transactions', ['namespace' => 'Wallet_Plugin\Controllers']);

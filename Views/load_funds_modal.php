@@ -12,38 +12,45 @@ $login_user_id = isset($login_user_id) ? $login_user_id : 0;
         </label>
         <div class="col-md-9 col-sm-8">
             <?php
-            // Get list of all clients from clients table
+            // Get list of all CLIENT USERS from users table (not clients table)
             $db = \Config\Database::connect();
             $db_prefix = $db->getPrefix();
             
-            // Get clients from the clients table
-            $clients = $db->table($db_prefix . 'clients')
+            // Get client users from the users table
+            $client_users = $db->table($db_prefix . 'users')
                 ->where('deleted', 0)
-                ->orderBy('company_name', 'ASC')
+                ->where('user_type', 'client')
+                ->orderBy('first_name', 'ASC')
                 ->get()
                 ->getResult();
             
             // Build dropdown options
             $client_options = array("" => "- " . app_lang('select_a_client') . " -");
             
-            if ($clients) {
-                foreach ($clients as $client) {
-                    // Format: Company Name - Contact info
-                    $name = $client->company_name;
+            if ($client_users) {
+                foreach ($client_users as $user) {
+                    // Format: First Name Last Name (Company)
+                    $name = $user->first_name . ' ' . $user->last_name;
                     
-                    // Add additional info if available
-                    $additional_info = array();
-                    if (!empty($client->primary_contact_name)) {
-                        $additional_info[] = $client->primary_contact_name;
-                    } elseif (!empty($client->owner_name)) {
-                        $additional_info[] = $client->owner_name;
+                    // Get company name from clients table if available
+                    if ($user->client_id) {
+                        $client = $db->table($db_prefix . 'clients')
+                            ->where('id', $user->client_id)
+                            ->where('deleted', 0)
+                            ->get()
+                            ->getRow();
+                        
+                        if ($client && $client->company_name) {
+                            $name .= ' (' . $client->company_name . ')';
+                        }
                     }
                     
-                    if (!empty($additional_info)) {
-                        $name .= ' (' . implode(', ', $additional_info) . ')';
+                    // Add email for clarity
+                    if (!empty($user->email)) {
+                        $name .= ' - ' . $user->email;
                     }
                     
-                    $client_options[$client->id] = $name;
+                    $client_options[$user->id] = $name;
                 }
             }
             
@@ -60,7 +67,7 @@ $login_user_id = isset($login_user_id) ? $login_user_id : 0;
                 )
             );
             ?>
-            <small class="form-text text-muted">Select the client to load funds for</small>
+            <small class="form-text text-muted">Select the client user to load funds for</small>
         </div>
     </div>
 </div>

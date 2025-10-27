@@ -22,7 +22,7 @@
 
             <div class="row">
                 <div class="col-md-12">
-                    <h4><?php echo wallet_lang('recent_transactions'); ?></h4>
+                    <h4 class="mb-3"><?php echo wallet_lang('recent_transactions'); ?></h4>
                     <div class="table-responsive">
                         <table id="wallet-transactions-table" class="display" cellspacing="0" width="100%">
                         </table>
@@ -41,17 +41,22 @@
 <script type="text/javascript">
     $(document).ready(function () {
         <?php if (isset($wallet) && $wallet->id) { ?>
+        
+        // Initialize the transactions table
         $("#wallet-transactions-table").appTable({
             source: '<?php echo_uri("wallet_plugin/transaction_list_data"); ?>',
             columns: [
-                {title: '<?php echo wallet_lang("date"); ?>', "class": "w15p"},
+                {title: '<?php echo wallet_lang("date"); ?>', "class": "w20p"},
                 {title: '<?php echo wallet_lang("type"); ?>', "class": "w10p text-center"},
                 {title: '<?php echo wallet_lang("amount"); ?>', "class": "w15p text-right"},
-                {title: '<?php echo wallet_lang("description"); ?>'},
+                {title: '<?php echo wallet_lang("description"); ?>', "class": "w40p"},
                 {title: '<?php echo wallet_lang("balance_after"); ?>', "class": "w15p text-right"}
             ],
-            order: [[0, "desc"]]
+            order: [[0, "desc"]],
+            printColumns: [0, 1, 2, 3, 4],
+            xlsColumns: [0, 1, 2, 3, 4]
         });
+        
         <?php } ?>
         
         // Initialize feather icons

@@ -30,9 +30,12 @@ class Wallet_transactions_model extends Crud_model {
 
     public function get_details($options = array()) {
         $db = \Config\Database::connect();
-        $transactions_table = $db->getPrefix() . $this->table;
-        $users_table = $db->getPrefix() . 'users';
-        $wallets_table = $db->getPrefix() . 'wallet';
+        $db_prefix = $db->getPrefix();
+        
+        // IMPORTANT: Don't add prefix again - it's already in getPrefix()
+        $transactions_table = $db_prefix . 'wallet_transactions';
+        $users_table = $db_prefix . 'users';
+        $wallets_table = $db_prefix . 'wallet';
 
         $where = "";
 
@@ -84,7 +87,8 @@ class Wallet_transactions_model extends Crud_model {
 
     public function get_transaction_summary($user_id) {
         $db = \Config\Database::connect();
-        $transactions_table = $db->getPrefix() . $this->table;
+        $db_prefix = $db->getPrefix();
+        $transactions_table = $db_prefix . 'wallet_transactions';
 
         $sql = "SELECT 
                 SUM(CASE WHEN transaction_type='credit' THEN amount ELSE 0 END) as total_credit,

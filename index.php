@@ -161,7 +161,61 @@ register_deactivation_hook("Wallet_Plugin", function () {
     $db->query("UPDATE `" . $db_prefix . "payment_methods` SET deleted = 1 WHERE type = 'wallet_payment'");
     $db->query("UPDATE `" . $db_prefix . "notification_settings` SET deleted = 1 WHERE category = 'wallet'");
 });
+// DEBUG VERSION - Replace the previous hook temporarily
+app_hooks()->add_filter('app_filter_payment_method_dropdown', function($payment_methods, $payment_method_id = 0) {
+    $db = db_connect('default');
+    $db_prefix = $db->getPrefix();
+    
+    // Log what we receive
+    error_log("=== Wallet Plugin Debug ===");
+    error_log("Current payment_methods array: " . print_r($payment_methods, true));
+    error_log("payment_method_id: " . $payment_method_id);
+    
+    try {
+        $result = $db->query("
+            SELECT id, title, type, deleted
+            FROM {$db_prefix}payment_methods 
+            WHERE type = 'wallet_payment'
+            LIMIT 1
+        ");
+        
+        if ($result) {
+            $wallet_method = $result->getRow();
+            error_log("Found wallet method: " . print_r($wallet_method, true));
+            
+            if ($wallet_method && $wallet_method->deleted == 0) {
+                $payment_methods[$wallet_method->id] = $wallet_method->title;
+                error_log("Added wallet to array at index: " . $wallet_method->id);
+            }
+        }
+    } catch (\Exception $e) {
+        error_log("Wallet Plugin Error: " . $e->getMessage());
+    }
+    
+    error_log("Final payment_methods array: " . print_r($payment_methods, true));
+    error_log("=== End Wallet Debug ===");
+    
+    return $payment_methods;
+}, 10, 2);
 
+// For invoice payment methods list
+app_hooks()->add_filter('app_filter_invoice_payment_methods', function($payment_methods) {
+    $db = db_connect('default');
+    $db_prefix = $db->getPrefix();
+    
+    $wallet_method = $db->table($db_prefix . 'payment_methods')
+        ->where('type', 'wallet_payment')
+        ->where('deleted', 0)
+        ->where('available_on_invoice', 1)
+        ->get()
+        ->getRow();
+    
+    if ($wallet_method) {
+        $payment_methods[] = $wallet_method;
+    }
+    
+    return $payment_methods;
+});
 // Add action links in Settings > Plugins
 app_hooks()->add_filter('app_filter_action_links_of_Wallet_Plugin', function ($action_links_array) {
     $action_links_array = array(
@@ -169,7 +223,6 @@ app_hooks()->add_filter('app_filter_action_links_of_Wallet_Plugin', function ($a
     );
     return $action_links_array;
 });
-
 // Add payment method settings
 app_hooks()->add_filter('app_filter_payment_method_settings', function($settings) {
     $settings["wallet_payment"] = array(
@@ -179,13 +232,64 @@ app_hooks()->add_filter('app_filter_payment_method_settings', function($settings
     return $settings;
 });
 
+// Make sure wallet payment method is available
+
+app_hooks()->add_filter('app_filter_available_payment_methods', function($payment_methods) {
+    $db = db_connect('default');
+    $db_prefix = $db->getPrefix();
+    
+    // Check if wallet payment method exists and is active
+    $method = $db->table($db_prefix . 'payment_methods')
+        ->where('type', 'wallet_payment')
+        ->where('deleted', 0)
+        ->get()
+        ->getRow();
+    
+    if ($method) {
+        // Check if wallet system is enabled
+        $wallet_enabled = $db->table($db_prefix . 'wallet_settings')
+            ->where('setting_name', 'wallet_enabled')
+            ->where('deleted', 0)
+            ->get()
+            ->getRow();
+        
+        if ($wallet_enabled && $wallet_enabled->setting_value == '1') {
+            $payment_methods[] = array(
+                'id' => $method->id,
+                'type' => 'wallet_payment',
+                'title' => $method->title,
+                'description' => $method->description
+            );
+        }
+    }
+    
+    return $payment_methods;
+});
+
 // Show wallet payment option in invoice view
-app_hooks()->add_action('app_hook_invoice_payment_extension', function($payment_method_variables) {
-    if (get_array_value($payment_method_variables, "method_type") === "wallet_payment") {
-        echo view("Wallet_Plugin\Views\invoice_payment", $payment_method_variables);
+app_hooks()->add_action('app_hook_invoice_payment_extension', function($payment_method_variables = array()) {
+    // Ensure we have valid data
+    if (!is_array($payment_method_variables)) {
+        return;
+    }
+    
+    $method_type = get_array_value($payment_method_variables, "method_type");
+    
+    // Only show our payment view for wallet_payment method
+    if ($method_type === "wallet_payment") {
+        echo view("Wallet_Plugin\Views\invoice_payment", array(
+            'payment_method_variables' => $payment_method_variables
+        ));
     }
 });
 
+app_hooks()->add_filter('app_filter_payment_methods', function($payment_methods) {
+    $payment_methods[] = array(
+        "id" => "wallet_payment",
+        "text" => "Wallet Payment"
+    );
+    return $payment_methods;
+});
 // Client menu - shows "My Wallet"
 app_hooks()->add_filter('app_filter_client_left_menu', function ($sidebar_menu) {
     $sidebar_menu["wallet"] = array(
@@ -264,4 +368,139 @@ app_hooks()->add_filter('app_filter_client_details_ajax_tab', function ($hook_ta
         "target" => "wallet-tab"
     );
     return $hook_tabs;
+});
+// Hook to process wallet payment when admin records payment manually
+app_hooks()->add_action('app_hook_payment_received', function($payment_id) {
+    try {
+        // Get payment details
+        $Payment_model = model("App\Models\Invoice_payments_model");
+        $payment = $Payment_model->get_one($payment_id);
+        
+        if (!$payment || !$payment->id) {
+            return;
+        }
+        
+        // Check if this is a wallet payment
+        $Payment_methods_model = model("App\Models\Payment_methods_model");
+        $payment_method = $Payment_methods_model->get_one($payment->payment_method_id);
+        
+        if (!$payment_method || $payment_method->type !== 'wallet_payment') {
+            return; // Not a wallet payment, skip
+        }
+        
+        // Get invoice to find the client
+        $Invoice_model = model("App\Models\Invoices_model");
+        $invoice = $Invoice_model->get_one($payment->invoice_id);
+        
+        if (!$invoice || !$invoice->id) {
+            error_log("Wallet Plugin: Invoice not found for payment ID: $payment_id");
+            return;
+        }
+        
+        // Get client's primary contact user
+        $db = db_connect('default');
+        $db_prefix = $db->getPrefix();
+        
+        $client_user = $db->table($db_prefix . 'users')
+            ->where('client_id', $invoice->client_id)
+            ->where('deleted', 0)
+            ->where('is_primary_contact', 1)
+            ->get()
+            ->getRow();
+        
+        if (!$client_user) {
+            // Try any contact for this client
+            $client_user = $db->table($db_prefix . 'users')
+                ->where('client_id', $invoice->client_id)
+                ->where('deleted', 0)
+                ->where('user_type', 'client')
+                ->orderBy('id', 'ASC')
+                ->get()
+                ->getRow();
+        }
+        
+        if (!$client_user) {
+            error_log("Wallet Plugin: No user found for client_id: " . $invoice->client_id);
+            return;
+        }
+        
+        // Get or create wallet for this user
+        $Wallet_model = new \Wallet_Plugin\Models\Wallet_model();
+        $wallet = $Wallet_model->get_one_where(array(
+            "user_id" => $client_user->id,
+            "deleted" => 0
+        ));
+        
+        if (!$wallet || !$wallet->id) {
+            // Auto-create wallet
+            $Wallet_settings_model = new \Wallet_Plugin\Models\Wallet_settings_model();
+            $wallet_currency = $Wallet_settings_model->get_setting("wallet_currency") ?: "USD";
+            $current_time = date('Y-m-d H:i:s');
+            
+            $wallet_data = array(
+                "user_id" => $client_user->id,
+                "balance" => 0,
+                "currency" => $wallet_currency,
+                "created_at" => $current_time,
+                "updated_at" => $current_time
+            );
+            $wallet_id = $Wallet_model->ci_save($wallet_data);
+            $wallet = $Wallet_model->get_one($wallet_id);
+        }
+        
+        // Check if wallet has sufficient balance
+        if ($wallet->balance < $payment->amount) {
+            error_log("Wallet Plugin: Insufficient balance. Required: {$payment->amount}, Available: {$wallet->balance}");
+            
+            // Optionally delete the payment record or mark it as failed
+            // For now, we'll just log the error
+            return;
+        }
+        
+        // Deduct from wallet
+        $current_time = date('Y-m-d H:i:s');
+        $new_balance = $wallet->balance - $payment->amount;
+        
+        // Create wallet transaction
+        $Wallet_transactions_model = new \Wallet_Plugin\Models\Wallet_transactions_model();
+        
+        // Get who created the payment (admin/staff)
+        $created_by = $payment->created_by ?: 1; // Default to admin if not set
+        
+        $transaction_data = array(
+            "wallet_id" => $wallet->id,
+            "user_id" => $client_user->id,
+            "transaction_type" => "debit",
+            "amount" => $payment->amount,
+            "currency" => $wallet->currency,
+            "reference_type" => "invoice",
+            "reference_id" => $payment->invoice_id,
+            "description" => "Payment for Invoice #" . $invoice->id . " (recorded by admin)",
+            "balance_before" => $wallet->balance,
+            "balance_after" => $new_balance,
+            "created_by" => $created_by,
+            "created_at" => $current_time,
+            "deleted" => 0
+        );
+        
+        $transaction_id = $Wallet_transactions_model->ci_save($transaction_data);
+        
+        if ($transaction_id) {
+            // Update wallet balance
+            $wallet_update = array(
+                "balance" => $new_balance,
+                "updated_at" => $current_time
+            );
+            $Wallet_model->ci_save($wallet_update, $wallet->id);
+            
+            error_log("Wallet Plugin: Successfully processed wallet payment. Transaction ID: $transaction_id");
+        }
+        
+    } catch (\Exception $e) {
+        error_log("Wallet Plugin Error in payment_received hook: " . $e->getMessage());
+    }
+});
+// Inject JavaScript for admin payment balance checking
+app_hooks()->add_action('app_hook_before_invoice_view_render', function() {
+    echo view("Wallet_Plugin\Views\admin_payment_check");
 });

@@ -1,9 +1,17 @@
 <?php
+// Safely get payment method variables
+$payment_method_variables = isset($payment_method_variables) ? $payment_method_variables : array();
+
 $payment_method = get_array_value($payment_method_variables, "payment_method");
 $balance_due = get_array_value($payment_method_variables, "balance_due");
 $currency = get_array_value($payment_method_variables, "currency");
 $invoice_id = get_array_value($payment_method_variables, "invoice_id");
 $invoice_info = get_array_value($payment_method_variables, "invoice_info");
+
+// If we don't have the required data, don't show anything
+if (!$invoice_id || !$balance_due) {
+    return;
+}
 
 $pay_button_text = get_setting("wallet_payment_pay_button_text") ?: "Pay from Wallet";
 $wallet_description = get_setting("wallet_payment_wallet_description") ?: "Use your wallet balance to make this payment";
@@ -34,12 +42,12 @@ $wallet_description = get_setting("wallet_payment_wallet_description") ?: "Use y
         <?php echo app_lang('insufficient_wallet_balance'); ?>
         <?php 
         echo modal_anchor(get_uri("wallet_plugin/load_funds_modal"), 
-    app_lang('load_funds'), 
-    array(
-        "class" => "btn btn-sm btn-primary",
-        "data-modal-lg" => true,
-        "data-post-id" => "0"
-    ));
+            app_lang('load_funds'), 
+            array(
+                "class" => "btn btn-sm btn-primary",
+                "data-modal-lg" => true,
+                "data-post-id" => "0"
+            ));
         ?>
     </div>
 
@@ -109,6 +117,11 @@ $wallet_description = get_setting("wallet_payment_wallet_description") ?: "Use y
                 });
             }
         });
+        
+        // Initialize feather icons
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
     });
 </script>
 

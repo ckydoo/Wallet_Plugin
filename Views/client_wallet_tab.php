@@ -19,16 +19,11 @@
                     <div class="card">
                         <div class="card-body">
                             <h5><?php echo app_lang('actions'); ?></h5>
-                            <?php 
-                            echo modal_anchor(get_uri("wallet_plugin/load_funds_modal?target_user_id=" . $client_id), 
-                                "<i data-feather='plus-circle' class='icon-16'></i> " . wallet_lang('load_funds'), 
-                                array(
-                                    "class" => "btn btn-success mb-2", 
-                                    "title" => wallet_lang('load_funds'),
-                                    "data-post-target_user_id" => $client_id
-                                )
-                            );
-                            ?>
+                            <button type="button" class="btn btn-success mb-2" id="load-funds-for-client-btn" 
+                                    data-client-id="<?php echo $client_id; ?>"
+                                    data-user-id="<?php echo isset($client_contact_id) ? $client_contact_id : 0; ?>">
+                                <i data-feather='plus-circle' class='icon-16'></i> <?php echo wallet_lang('load_funds'); ?>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -46,18 +41,16 @@
     <?php } else { ?>
         <div class="alert alert-warning">
             <p><?php echo wallet_lang('wallet_not_created'); ?></p>
-            <?php if (isset($is_staff) && $is_staff) { ?>
-                <?php 
-                echo modal_anchor(get_uri("wallet_plugin/load_funds_modal?target_user_id=" . $client_id), 
-                    "<i data-feather='plus-circle' class='icon-16'></i> " . wallet_lang('load_funds'), 
-                    array(
-                        "class" => "btn btn-primary", 
-                        "title" => wallet_lang('load_funds'),
-                        "data-post-target_user_id" => $client_id
-                    )
-                );
-                ?>
-                <p class="mt-2"><small>Creating a wallet and loading funds for this client</small></p>
+            <?php if (isset($is_staff) && $is_staff && isset($client_contact_id) && $client_contact_id > 0) { ?>
+                <button class="btn btn-primary" id="load-funds-for-client-btn" 
+                        data-client-id="<?php echo $client_id; ?>"
+                        data-user-id="<?php echo $client_contact_id; ?>">
+                    <i data-feather="plus-circle" class="icon-16"></i>
+                    <?php echo wallet_lang('load_funds'); ?>
+                </button>
+                <p class="mt-2"><small>This will create a wallet and load funds for this client</small></p>
+            <?php } else { ?>
+                <p class="text-muted">Contact information not found for this client.</p>
             <?php } ?>
         </div>
     <?php } ?>
@@ -65,20 +58,69 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
-        <?php if (isset($wallet) && $wallet->id) { ?>
+        <?php if (isset($wallet) && $wallet->id && isset($client_contact_id)) { ?>
         $("#client-wallet-transactions-table").appTable({
             source: '<?php echo_uri("wallet_plugin/transaction_list_data"); ?>',
-            filterParams: {user_id: <?php echo $client_id; ?>},
+            filterParams: {user_id: <?php echo $client_contact_id; ?>},
             columns: [
                 {title: '<?php echo app_lang("date"); ?>', "class": "w15p"},
-                {title: '<?php echo wallet_lang("type"); ?>', "class": "w10p text-center"},
+                {title: '<?php echo app_lang("type"); ?>', "class": "w10p text-center"},
                 {title: '<?php echo app_lang("amount"); ?>', "class": "w15p text-right"},
-                {title: '<?php echo wallet_lang("description"); ?>'},
+                {title: '<?php echo app_lang("description"); ?>'},
                 {title: '<?php echo wallet_lang("balance_after"); ?>', "class": "w15p text-right"}
             ],
             order: [[0, "desc"]]
         });
         <?php } ?>
+
+        // Load funds button for staff
+        $(document).on('click', '#load-funds-for-client-btn', function() {
+            var userId = $(this).data('user-id');
+            
+            if (!userId || userId == 0) {
+                appAlert.error('Unable to load funds: Client contact not found.');
+                return;
+            }
+            
+            $.ajax({
+                url: '<?php echo_uri("wallet_plugin/load_funds_modal"); ?>?target_user_id=' + userId,
+                type: 'GET',
+                dataType: 'html',
+                success: function(result) {
+                    if (result && result.trim() !== '') {
+                        var modalContent = `
+                            <div class="modal fade" id="wallet-load-funds-modal" tabindex="-1" role="dialog">
+                                <div class="modal-dialog modal-lg" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h4 class="modal-title"><?php echo wallet_lang("load_funds"); ?></h4>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            ${result}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        $("#wallet-load-funds-modal").remove();
+                        $("body").append(modalContent);
+                        $("#wallet-load-funds-modal").modal('show');
+                        
+                        if (typeof feather !== 'undefined') {
+                            feather.replace();
+                        }
+                    } else {
+                        appAlert.error('<?php echo app_lang("error_occurred"); ?>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading modal:', error);
+                    appAlert.error('<?php echo app_lang("error_occurred"); ?>: Unable to load modal');
+                }
+            });
+        });
 
         // Initialize feather icons
         if (typeof feather !== 'undefined') {
