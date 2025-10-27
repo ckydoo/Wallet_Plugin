@@ -161,42 +161,6 @@ register_deactivation_hook("Wallet_Plugin", function () {
     $db->query("UPDATE `" . $db_prefix . "payment_methods` SET deleted = 1 WHERE type = 'wallet_payment'");
     $db->query("UPDATE `" . $db_prefix . "notification_settings` SET deleted = 1 WHERE category = 'wallet'");
 });
-// DEBUG VERSION - Replace the previous hook temporarily
-app_hooks()->add_filter('app_filter_payment_method_dropdown', function($payment_methods, $payment_method_id = 0) {
-    $db = db_connect('default');
-    $db_prefix = $db->getPrefix();
-    
-    // Log what we receive
-    error_log("=== Wallet Plugin Debug ===");
-    error_log("Current payment_methods array: " . print_r($payment_methods, true));
-    error_log("payment_method_id: " . $payment_method_id);
-    
-    try {
-        $result = $db->query("
-            SELECT id, title, type, deleted
-            FROM {$db_prefix}payment_methods 
-            WHERE type = 'wallet_payment'
-            LIMIT 1
-        ");
-        
-        if ($result) {
-            $wallet_method = $result->getRow();
-            error_log("Found wallet method: " . print_r($wallet_method, true));
-            
-            if ($wallet_method && $wallet_method->deleted == 0) {
-                $payment_methods[$wallet_method->id] = $wallet_method->title;
-                error_log("Added wallet to array at index: " . $wallet_method->id);
-            }
-        }
-    } catch (\Exception $e) {
-        error_log("Wallet Plugin Error: " . $e->getMessage());
-    }
-    
-    error_log("Final payment_methods array: " . print_r($payment_methods, true));
-    error_log("=== End Wallet Debug ===");
-    
-    return $payment_methods;
-}, 10, 2);
 
 // For invoice payment methods list
 app_hooks()->add_filter('app_filter_invoice_payment_methods', function($payment_methods) {
