@@ -247,13 +247,13 @@ app_hooks()->add_action('app_hook_invoice_payment_extension', function($payment_
     }
 });
 
-app_hooks()->add_filter('app_filter_payment_methods', function($payment_methods) {
-    $payment_methods[] = array(
-        "id" => "wallet_payment",
-        "text" => "Wallet Payment"
-    );
-    return $payment_methods;
-});
+// app_hooks()->add_filter('app_filter_payment_methods', function($payment_methods) {
+//     $payment_methods[] = array(
+//         "id" => "wallet_payment",
+//         "text" => "Wallet Payment"
+//     );
+//     return $payment_methods;
+// });
 // Client menu - shows "My Wallet"
 app_hooks()->add_filter('app_filter_client_left_menu', function ($sidebar_menu) {
     $sidebar_menu["wallet"] = array(
